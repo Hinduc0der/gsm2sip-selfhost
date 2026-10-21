@@ -1182,10 +1182,18 @@ class GatewayService : Service() {
         val useTls = prefs.getBoolean("sip_tls", false)
         if (useTls) broadcastLog("SIP transport: TLS to $cfgServer:$cfgPort")
 
+        // "Device in itself": the gateway is the registrar. A softphone
+        // registers straight to it and calls flow peer-to-peer on the LAN,
+        // with no external server or proxy in the signalling path.
+        // Default ON — this build is the built-in ATS by design; set the pref
+        // to false only to fall back to the old outbound-client mode.
+        val builtinRegistrar = prefs.getBoolean("builtin_registrar", true)
+        if (builtinRegistrar) broadcastLog("Built-in registrar ON — softphones register to $localIp:5062")
+
         val sip = SipClient(
             username = cfgUser,
             password = cfgPass,
-            serverDomain = cfgServer,
+            serverDomain = if (builtinRegistrar) localIp else cfgServer,
             serverPort = cfgPort,
             localIp = localIp,
             // Pixel/Android Wi-Fi drops unsolicited UDP replies addressed to
@@ -1194,7 +1202,8 @@ class GatewayService : Service() {
             network = activeNetwork,
             publicIp = publicIp,
             useTls = useTls,
-            srtpRequested = prefs.getBoolean("srtp_enabled", false)
+            srtpRequested = prefs.getBoolean("srtp_enabled", false),
+            builtinRegistrar = builtinRegistrar
         )
         sipClient = sip
 
@@ -1318,8 +1327,13 @@ class GatewayService : Service() {
 
         try {
             sip.start()
-            broadcastLog("[v${BuildConfig.VERSION_NAME}] SIP client started, registering with $cfgServer:$cfgPort")
-            broadcastStatus("STARTING", "Registering with $cfgServer")
+            if (builtinRegistrar) {
+                broadcastLog("[v${BuildConfig.VERSION_NAME}] SIP client started — built-in registrar on $localIp:5062")
+                broadcastStatus("STARTING", "Registrar on $localIp:5062")
+            } else {
+                broadcastLog("[v${BuildConfig.VERSION_NAME}] SIP client started, registering with $cfgServer:$cfgPort")
+                broadcastStatus("STARTING", "Registering with $cfgServer")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start SIP client: ${e.message}", e)
             broadcastLog("ERROR: SIP start failed — ${e.message}")

@@ -5,14 +5,16 @@ plugins {
 
 android {
     namespace = "com.callagent.gateway"
-    compileSdk = 34
+    // compileSdk 35: в этом SDK установлены платформы 35/36/37, но не 34.
+    // targetSdk оставлен 34 — поведение в рантайме не меняется.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.callagent.gateway"
         minSdk = 26
         targetSdk = 34
-        versionCode = 425
-        versionName = "1.2.0"
+        versionCode = 436
+        versionName = "1.3.9"
     }
 
     // A release build is signed with the same debug key the debug build uses.

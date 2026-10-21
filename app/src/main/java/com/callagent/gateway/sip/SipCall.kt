@@ -116,8 +116,11 @@ class SipCall(
         fun onDtmf(call: SipCall, digit: Char, durationMs: Int) {}
     }
 
-    /** Process incoming SIP message for this dialog */
-    fun handleMessage(msg: SipMessage): Boolean {
+    /** Process incoming SIP message for this dialog.
+     *  @param srcAddress the UDP source the datagram arrived from — used as the
+     *  in-dialog target for ACK/BYE (symmetric UDP), which is reachable even
+     *  when the peer's Contact header advertises a different or unroutable port. */
+    fun handleMessage(msg: SipMessage, srcAddress: Pair<String, Int>? = null): Boolean {
         // Stop INVITE retransmission as soon as any response arrives
         if (msg.isResponse) responseReceived = true
 
@@ -127,7 +130,17 @@ class SipCall(
                 remoteTag = msg.toTag
                 toHeader = msg.to
                 msg.contactUri?.let { remoteContactUri = it }
-                msg.contactAddress?.let { remoteContactAddress = it }
+                // Deliver the ACK (and the later BYE) to where the 200 OK
+                // actually came from, not to the address in its Contact header.
+                // A softphone like Linphone advertises a Contact that need not
+                // match the socket it signals on; sending in-dialog requests to
+                // the Contact's port got them dropped, so Linphone retransmitted
+                // 200 OK (dialog never confirmed, no reverse RTP) and ignored the
+                // BYE (call stayed up on its screen). The response's own source
+                // is the reachable socket. Fall back to Contact, then to any
+                // pre-set (registrar) address.
+                remoteContactAddress = srcAddress ?: msg.contactAddress ?: remoteContactAddress
+                Log.i(TAG, "200 OK dialog target: src=$srcAddress contact=${msg.contactAddress} using=$remoteContactAddress")
                 msg.sdpRtpPort?.let { remoteRtpPort = it }
                 msg.sdpAddress?.let { remoteRtpAddress = it }
                 negotiatedPayloadType = msg.sdpPreferredPayloadType

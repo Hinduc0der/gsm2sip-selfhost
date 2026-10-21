@@ -27,14 +27,21 @@ class SipClient(
     val serverPort: Int = 5060,
     var localIp: String = "0.0.0.0",
     val localPort: Int = 5060,
-    /** Android network carrying this SIP session; refreshed on reconnect. */
-    private val network: Network? = null,
+    /** Android network carrying this SIP session; refreshed on reconnect.
+     *  Exposed so the media path (RtpSession) binds its socket to the SAME
+     *  network — an unbound RTP socket does not reliably send to, or receive
+     *  from, a LAN peer even though network-bound SIP on the same device does. */
+    val network: Network? = null,
     /** Public IP discovered via STUN — used in Contact headers and SDP for NAT traversal */
     var publicIp: String = localIp,
     /** SIP over TLS instead of UDP.  Signalling only — RTP is unaffected. */
     val useTls: Boolean = false,
     /** Offer and accept SDES-keyed SRTP.  Only honoured when [useTls] is on. */
-    private val srtpRequested: Boolean = false
+    private val srtpRequested: Boolean = false,
+    /** Act as the SIP registrar/UAS itself: accept inbound REGISTER from a
+     *  softphone and place GSM→SIP calls straight to it, with no external
+     *  server or proxy in the signalling path ("device in itself"). */
+    val builtinRegistrar: Boolean = false
 ) {
     /**
      * Whether this call leg may use SRTP at all.
@@ -74,6 +81,18 @@ class SipClient(
     @Volatile private var registerFailures = 0
 
     private val activeCalls = ConcurrentHashMap<String, SipCall>()
+
+    /** A softphone's registration (registrar mode): AOR and where to reach it. */
+    data class Registration(
+        val aor: String, val contactUri: String,
+        val address: Pair<String, Int>, val expiresAt: Long
+    )
+    private val registrations = ConcurrentHashMap<String, Registration>()
+    /** The live softphone registration, if any (registrar mode). */
+    fun currentRegistration(): Registration? {
+        val t = System.currentTimeMillis()
+        return registrations.values.firstOrNull { it.expiresAt > t }
+    }
     /** Single-thread executor for all socket sends — avoids NetworkOnMainThreadException */
     private var sendExecutor: ExecutorService? = null
 
@@ -132,10 +151,18 @@ class SipClient(
             try { monitorLoop() }
             catch (e: Exception) { uiLog("Monitor loop crashed: ${e.message}") }
         }, "SIP-Monitor").start()
-        Thread({
-            try { register() }
-            catch (e: Exception) { uiLog("Register thread crashed: ${e.message}") }
-        }, "SIP-Register").start()
+        if (builtinRegistrar) {
+            // We are the registrar: nothing to register with. Operational as
+            // soon as the socket is up; softphones register to us.
+            registered = true
+            uiLog("Registrar mode — listening on :$localPort, no outbound registration")
+            listener?.onRegistered()
+        } else {
+            Thread({
+                try { register() }
+                catch (e: Exception) { uiLog("Register thread crashed: ${e.message}") }
+            }, "SIP-Register").start()
+        }
     }
 
     @Synchronized
@@ -211,6 +238,8 @@ class SipClient(
     }
 
     private fun doSend(data: String, address: Pair<String, Int>) {
+        // TEMP wire log — full SIP dump to diagnose one-way RTP (SDP addresses).
+        Log.i("SipWire", "OUT -> ${address.first}:${address.second}\n$data")
         try {
             val t = transport ?: return
             // Use the cached address for the server so this never does DNS.
@@ -252,12 +281,20 @@ class SipClient(
     }
 
     private fun handlePacket(data: String, address: Pair<String, Int>) {
+        // TEMP wire log — full SIP dump to diagnose one-way RTP (SDP addresses).
+        Log.i("SipWire", "IN <- ${address.first}:${address.second}\n$data")
         val msg = SipMessage.parse(data) ?: return
 
         // OPTIONS keepalive from server
         if (msg.isRequest && msg.method == "OPTIONS") {
             val resp = SipBuilder.optionsResponse(msg, username, publicIp, advertisedPort)
             sendTo(resp, address)
+            return
+        }
+
+        // Inbound REGISTER — we are the registrar ("device in itself" mode).
+        if (builtinRegistrar && msg.isRequest && msg.method == "REGISTER") {
+            handleInboundRegister(msg, address)
             return
         }
 
@@ -289,7 +326,7 @@ class SipClient(
                 if (msg.isResponse && msg.statusCode != 100) {
                     uiLog("SIP ${msg.statusCode} for INVITE (call $callId)")
                 }
-                val handled = call.handleMessage(msg)
+                val handled = call.handleMessage(msg, address)
                 if (!handled) {
                     Log.w(TAG, "Unhandled SIP message for call $callId: ${msg.startLine}")
                 }
@@ -462,6 +499,40 @@ class SipClient(
         }
     }
 
+    // ── Registrar (device-in-itself) ────────────────────
+
+    /**
+     * Record where a softphone can be reached and answer 200 OK — the gateway
+     * acting as the registrar.  The source address of the REGISTER is used as
+     * the contact: it is the port the UA actually listens on (its rport), which
+     * is what a real registrar latches onto, and it is where ACK/BYE for the
+     * call must go so the dialog completes.
+     */
+    private fun handleInboundRegister(msg: SipMessage, address: Pair<String, Int>) {
+        val aor = msg.to?.let { msg.extractUser(it) }
+            ?: msg.from?.let { msg.extractUser(it) }
+        if (aor == null) {
+            sendTo(SipBuilder.statusResponse(msg, 400, "Bad Request"), address)
+            return
+        }
+        val contactExp = msg.contact?.let {
+            Regex("expires=(\\d+)").find(it)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        }
+        val expires = contactExp ?: msg.header("expires")?.trim()?.toIntOrNull() ?: 3600
+        val contactUri = msg.contactUri
+        if (expires <= 0 || contactUri == null) {
+            registrations.remove(aor)
+            uiLog("Registrar: $aor unregistered")
+        } else {
+            registrations[aor] = Registration(
+                aor, contactUri, address, System.currentTimeMillis() + expires * 1000L
+            )
+            uiLog("Registrar: $aor -> ${address.first}:${address.second} exp=$expires")
+        }
+        val echo = if (contactUri != null) "<$contactUri>" else "*"
+        sendTo(SipBuilder.registerOk(msg, echo, expires), address)
+    }
+
     // ── Incoming INVITE ─────────────────────────────────
 
     private fun handleIncomingInvite(msg: SipMessage, address: Pair<String, Int>) {
@@ -531,14 +602,20 @@ class SipClient(
         val fromUser = callerIdNumber ?: username
         val fromDisplay = if (callerIdName != null) "\"$callerIdName\" " else ""
         call.fromHeader = "$fromDisplay<sip:$fromUser@$serverDomain>;tag=${call.localTag}"
-        call.toHeader = "<sip:$targetExtension@$serverDomain>"
+        // Registrar mode: call the softphone's registered contact directly,
+        // peer-to-peer, no server/proxy in the path.  remoteContactAddress is
+        // set now so the ACK for its 200 OK — and any BYE — go straight to it
+        // and the dialog completes (a proxy in the path broke exactly this).
+        val reg = if (builtinRegistrar) currentRegistration() else null
+        val targetUri = reg?.contactUri ?: "sip:$targetExtension@$serverDomain"
+        val sendAddr = reg?.address ?: serverAddress
+        reg?.let { call.remoteContactAddress = it.address }
+        call.toHeader = "<$targetUri>"
 
         // Generated once, here, and reused for every retry and re-INVITE of
         // this call: rekeying mid-dialog is not something chan_sip handles
         // predictably, and there is no reason to.
         if (srtpEnabled) call.localSrtpKeys = SrtpKeys.generate(SrtpCryptoSuite.offered)
-
-        val targetUri = "sip:$targetExtension@$serverDomain"
         val invite = SipBuilder.invite(
             targetUri, username, serverDomain,
             publicIp, advertisedPort,
@@ -555,7 +632,7 @@ class SipClient(
         call.originalInvite = SipMessage.parse(invite)
 
         activeCalls[callId] = call
-        sendTo(invite, serverAddress)
+        sendTo(invite, sendAddr)
         // Log both halves the server routes on: the Request-URI it turns into
         // EXTEN, and the From user it turns into caller ID.
         Log.i(TAG, "Sent INVITE RURI=$targetUri From=<sip:$fromUser@$serverDomain> (call-id=$callId)")
@@ -579,7 +656,7 @@ class SipClient(
                 // worth recording, and without it an unanswered INVITE showed
                 // up in the app only as a call that never got picked up.
                 if (i == 1) uiLog("No response to INVITE — retransmitting")
-                sendTo(invite, serverAddress)
+                sendTo(invite, sendAddr)
                 unanswered = true
                 delay = minOf(delay * 2, maxDelay)
             }
@@ -731,6 +808,14 @@ class SipClient(
     private fun monitorLoop() {
         Thread.sleep(15_000)
         while (running.get()) {
+            // Registrar mode makes no outbound requests: it only ages out stale
+            // softphone registrations and waits.
+            if (builtinRegistrar) {
+                val t = System.currentTimeMillis()
+                registrations.entries.removeIf { it.value.expiresAt < t }
+                Thread.sleep(POLL_INTERVAL_MS)
+                continue
+            }
             try {
                 if (!registered) {
                     // A dropped TLS connection has to be rebuilt before any

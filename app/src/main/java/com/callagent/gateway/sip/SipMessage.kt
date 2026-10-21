@@ -461,6 +461,24 @@ object SipBuilder {
         }
     }
 
+    /** 200 OK for an inbound REGISTER — the gateway acting as the registrar.
+     *  Echoes the UA's Contact and the granted lifetime. */
+    fun registerOk(msg: SipMessage, contact: String, expires: Int, toTag: String = tag()): String {
+        val to = msg.to ?: ""
+        val toWithTag = if (to.contains(";tag=")) to else "$to;tag=$toTag"
+        return buildString {
+            append("SIP/2.0 200 OK\r\n")
+            append("Via: ${msg.via}\r\n")
+            append("To: $toWithTag\r\n")
+            append("From: ${msg.from}\r\n")
+            append("Call-ID: ${msg.callId}\r\n")
+            append("CSeq: ${msg.cseq}\r\n")
+            append("Contact: $contact;expires=$expires\r\n")
+            append("User-Agent: $userAgent\r\n")
+            append("Content-Length: 0\r\n\r\n")
+        }
+    }
+
     fun trying100(msg: SipMessage): String = buildString {
         append("SIP/2.0 100 Trying\r\n")
         append("Via: ${msg.via}\r\n")

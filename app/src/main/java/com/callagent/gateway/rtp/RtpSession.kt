@@ -46,7 +46,14 @@ class RtpSession(
     private val localPort: Int,
     private val remoteAddr: String,
     private val remotePort: Int,
-    private val payloadType: Int = RtpPacket.PT_PCMA
+    private val payloadType: Int = RtpPacket.PT_PCMA,
+    /** The media socket, already bound, handed over from the orchestrator. It was
+     *  opened when the RTP port was chosen and kept open ever since, so the port
+     *  advertised in the SDP is this socket's real port. Binding a fresh socket
+     *  here instead raced the 6 s gap between INVITE and answer: the port got
+     *  grabbed, the re-bind landed on a different one, and the peer's RTP went to
+     *  a dead port (the one-way/no-audio symptom). Null only in defensive paths. */
+    private val preboundSocket: DatagramSocket? = null
 ) {
     private val running = AtomicBoolean(false)
     /** Ensures the stop callback is delivered once, including a session that
@@ -150,7 +157,9 @@ class RtpSession(
 
     // RTP inactivity tracking
     @Volatile private var lastRtpReceivedTime = 0L
-    private val RTP_TIMEOUT_MS = 30_000L  // 30 seconds with no RTP = dead call
+    // TEMP: raised from 30s to 1h for debugging one-way audio — a silent
+    // reverse leg must not tear the call down while we read softphone stats.
+    private val RTP_TIMEOUT_MS = 3_600_000L  // was 30_000L
 
     // Packet counters and audio diagnostics
     @Volatile var txPacketCount = 0L; private set
@@ -217,11 +226,30 @@ class RtpSession(
         Log.i(TAG, "Starting RTP session: local=$localPort remote=$remoteAddr:$remotePort pt=$payloadType")
 
         try {
-            socket = DatagramSocket(null).apply {
-                reuseAddress = true
-                bind(InetSocketAddress(localPort))
-                soTimeout = 100
-                receiveBufferSize = 262144
+            val pre = preboundSocket
+            socket = if (pre != null) {
+                // Normal path: take over the socket the orchestrator already bound
+                // when it picked the port. No second bind, so no port can be lost.
+                pre.apply {
+                    soTimeout = 100
+                    receiveBufferSize = 262144
+                }
+            } else {
+                // Defensive fallback only (orchestrator always supplies a socket).
+                DatagramSocket(null).apply {
+                    reuseAddress = true
+                    bind(InetSocketAddress(localPort))
+                    soTimeout = 100
+                    receiveBufferSize = 262144
+                }
+            }
+            // Diagnostic: the socket must listen on the exact port advertised in
+            // the SDP, or the far end's RTP goes to a dead port (one-way audio).
+            val actualPort = socket?.localPort ?: -1
+            if (actualPort != localPort) {
+                Log.e(TAG, "RTP socket port MISMATCH: bound=$actualPort advertised=$localPort — reverse audio will fail")
+            } else {
+                Log.i(TAG, "RTP socket bound OK on $actualPort")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind RTP socket on port $localPort: ${e.message}")

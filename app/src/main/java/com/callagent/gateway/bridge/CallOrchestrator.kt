@@ -69,6 +69,10 @@ class CallOrchestrator(
     private var pendingRtpPort: Int = 0
     private var pendingPayloadType: Int = 0
     private var pendingLocalRtpPort: Int = 0
+    /** The RTP socket, bound when the port was chosen, kept open until RtpSession
+     *  takes it over in startRtp. Holding it (rather than bind-probe-close then
+     *  re-bind) is what guarantees the SDP port still belongs to us at answer. */
+    private var pendingRtpSocket: java.net.DatagramSocket? = null
 
     // SIP call retry: if SIP fails while GSM is ringing, retry before giving up.
     // Transient network issues or socket races can kill the first attempt.
@@ -293,17 +297,24 @@ class CallOrchestrator(
         val prefs = context.getSharedPreferences("gateway", Context.MODE_PRIVATE)
         val subscription = gsmCall?.details?.accountHandle?.let { account ->
             try {
-                val tm = context.getSystemService(TelephonyManager::class.java)
-                val subId = tm.getSubscriptionId(account)
-                if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                    val info = context.getSystemService(SubscriptionManager::class.java)
-                        ?.getActiveSubscriptionInfo(subId)
-                    if (info != null && info.simSlotIndex >= 0) {
-                        Log.i(TAG, "Incoming call on SIM slot ${info.simSlotIndex} (subscription $subId)")
-                        subId to info.simSlotIndex
+                // TelephonyManager.getSubscriptionId(PhoneAccountHandle) появился только
+                // в API 30 (Android 11). На более старых сборках (здесь — LineageOS 16 / API 28)
+                // метода нет, вызов бросает NoSuchMethodError (это Error, а не Exception, его не
+                // ловил прежний catch — поток обработки звонка падал). На < R уходим на запасной
+                // путь по own_number.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val tm = context.getSystemService(TelephonyManager::class.java)
+                    val subId = tm.getSubscriptionId(account)
+                    if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                        val info = context.getSystemService(SubscriptionManager::class.java)
+                            ?.getActiveSubscriptionInfo(subId)
+                        if (info != null && info.simSlotIndex >= 0) {
+                            Log.i(TAG, "Incoming call on SIM slot ${info.simSlotIndex} (subscription $subId)")
+                            subId to info.simSlotIndex
+                        } else null
                     } else null
                 } else null
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w(TAG, "Could not resolve incoming call SIM: ${e.message}")
                 null
             }
@@ -674,7 +685,8 @@ class CallOrchestrator(
                     // Answer the SIP call off the main thread
                     Thread({
                         activeSipCall?.let { sipCall ->
-                            val rtpPort = allocateRtpPort()
+                            val rtpSocket = allocateRtpSocket()
+                            val rtpPort = rtpSocket.localPort
                             sipCall.listener = this
                             sipCall.accept(rtpPort)
 
@@ -682,7 +694,9 @@ class CallOrchestrator(
                             val port = sipCall.remoteRtpPort
                             val pt = sipCall.negotiatedPayloadType
                             if (port > 0) {
-                                startRtp(rtpPort, addr, port, pt)
+                                startRtp(rtpPort, addr, port, pt, rtpSocket)
+                            } else {
+                                try { rtpSocket.close() } catch (_: Exception) {}
                             }
                         }
                         Log.i(TAG, "Outbound bridge established")
@@ -853,7 +867,10 @@ class CallOrchestrator(
         bridgeState = BridgeState.SIP_CALLING
         listener?.onStateChanged(bridgeState, "Calling Asterisk for $callerNumber")
 
-        val rtpPort = allocateRtpPort()
+        pendingRtpSocket?.let { try { it.close() } catch (_: Exception) {} }
+        val rtpSocket = allocateRtpSocket()
+        pendingRtpSocket = rtpSocket
+        val rtpPort = rtpSocket.localPort
         val sipCall = sipClient.makeCall(
             targetExtension = inboundSipDestination(gsmCall),
             localRtpPort = rtpPort,
@@ -915,7 +932,8 @@ class CallOrchestrator(
     // ── RTP ─────────────────────────────────────────────
 
     private fun startRtp(localPort: Int, remoteAddr: String, remotePort: Int,
-                         payloadType: Int = RtpPacket.PT_G722) {
+                         payloadType: Int = RtpPacket.PT_G722,
+                         rtpSocket: java.net.DatagramSocket? = null) {
         // Not @Synchronized, deliberately: tearDown() is, and it is reached
         // from the Telecom callback on the main thread, so sharing a monitor
         // with this method — which blocks for as long as AudioRecord takes to
@@ -948,7 +966,12 @@ class CallOrchestrator(
                 }
             }
         }
-        val session = RtpSession(context, localPort, remoteAddr, remotePort, payloadType)
+        // Prefer the socket the caller passed; otherwise take over the one stashed
+        // at port-allocation time (inbound). Either way the port is already ours.
+        val socketForSession = rtpSocket ?: pendingRtpSocket
+        pendingRtpSocket = null
+        val session = RtpSession(context, localPort, remoteAddr, remotePort, payloadType,
+            preboundSocket = socketForSession)
 
         // DTMF from the SIP side → the GSM call, so IVR menus work.  Accept
         // the payload type the server named in its SDP as well as our own 101.
@@ -1080,6 +1103,9 @@ class CallOrchestrator(
             activeGsmCall = null
             pendingIncoming = null
             pendingRtpAddr = null
+            // If the call tore down before RtpSession took the socket over, free it.
+            pendingRtpSocket?.let { try { it.close() } catch (_: Exception) {} }
+            pendingRtpSocket = null
         } finally {
             bridgeState = BridgeState.IDLE
             generation++
@@ -1092,26 +1118,30 @@ class CallOrchestrator(
     // ── Utility ─────────────────────────────────────────
 
     /**
-     * Pick a free even UDP port for RTP.
+     * Open and bind a free even UDP port for RTP, returning the LIVE socket.
      *
-     * The scan starts at a random offset rather than always at 30000.  The
-     * port is probed by binding and closing, so there is a gap before
-     * RtpSession binds it for real; starting from the same place every time
-     * meant consecutive calls raced each other for the very same port, which
-     * is the one way that gap reliably loses.
+     * The socket is deliberately kept open: its port goes straight into the
+     * INVITE's SDP, and the same socket is later handed to RtpSession. The old
+     * code bound and closed here, then let RtpSession bind again — but on an
+     * inbound call the gap between those two binds is the whole ring time (~6 s),
+     * long enough for the port to be taken. The re-bind then landed on a
+     * different port while the SDP still advertised the first, so the peer's RTP
+     * went nowhere (one-way audio). Holding one socket end to end removes the gap.
+     *
+     * The random start offset still keeps concurrent calls off the same port.
      */
-    private fun allocateRtpPort(): Int {
+    private fun allocateRtpSocket(): DatagramSocket {
         val span = (RTP_PORT_MAX - RTP_PORT_MIN) / 2
         val start = (Math.random() * span).toInt()
         for (i in 0 until span) {
             val port = RTP_PORT_MIN + ((start + i) % span) * 2
+            val sock = DatagramSocket(null)
             try {
-                DatagramSocket(null).use { sock ->
-                    sock.reuseAddress = true
-                    sock.bind(InetSocketAddress(port))
-                    return port
-                }
+                sock.reuseAddress = true
+                sock.bind(InetSocketAddress(port))
+                return sock
             } catch (_: Exception) {
+                try { sock.close() } catch (_: Exception) {}
                 continue
             }
         }
@@ -1211,6 +1241,8 @@ class CallOrchestrator(
         activeGsmCall = null
         pendingIncoming = null
         pendingRtpAddr = null
+        pendingRtpSocket?.let { try { it.close() } catch (_: Exception) {} }
+        pendingRtpSocket = null
         diallerInitiated = false
         bridgeState = BridgeState.IDLE
         generation++
