@@ -1261,7 +1261,9 @@ class GatewayService : Service() {
             publicIp = publicIp,
             useTls = useTls,
             srtpRequested = prefs.getBoolean("srtp_enabled", false),
-            builtinRegistrar = builtinRegistrar
+            builtinRegistrar = builtinRegistrar,
+            // Registrar auth: softphone must present this password to REGISTER. Empty = open.
+            registrarPassword = prefs.getString("registrar_password", "") ?: ""
         )
         sipClient = sip
 

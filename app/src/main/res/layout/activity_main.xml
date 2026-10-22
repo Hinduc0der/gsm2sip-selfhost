@@ -768,6 +768,19 @@
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
 
+                        <TextView style="@style/CfgLabel"
+                            android:text="@string/cfg_registrar_password"
+                            android:layout_marginTop="8dp" />
+                        <EditText android:id="@+id/etCfgRegPass" style="@style/CfgField"
+                            android:hint="@string/cfg_hint_password" android:inputType="textPassword" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/cfg_registrar_password_hint"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_hint"
+                            android:paddingTop="6dp" />
+
                         <CheckBox
                             android:id="@+id/cbCfgTranslit"
                             android:layout_width="match_parent"

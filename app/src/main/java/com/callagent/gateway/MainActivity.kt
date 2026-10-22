@@ -610,6 +610,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<EditText>(R.id.etCfgPort).setText(prefs.getInt("port", 5060).toString())
         findViewById<EditText>(R.id.etCfgUser).setText(prefs.getString("user", ""))
         findViewById<EditText>(R.id.etCfgPass).setText(prefs.getString("pass", ""))
+        findViewById<EditText>(R.id.etCfgRegPass).setText(prefs.getString("registrar_password", ""))
         buildOwnNumberFields(prefs)
         findViewById<CheckBox>(R.id.cbCfgAutoconnect).isChecked =
             prefs.getBoolean("autoconnect", true)
@@ -724,6 +725,7 @@ class MainActivity : AppCompatActivity() {
         val port = findViewById<EditText>(R.id.etCfgPort).text.toString().trim().toIntOrNull() ?: 5060
         val user = findViewById<EditText>(R.id.etCfgUser).text.toString().trim()
         val pass = findViewById<EditText>(R.id.etCfgPass).text.toString().trim()
+        val regPass = findViewById<EditText>(R.id.etCfgRegPass).text.toString()
         // The lowest active SIM's number is the one everything that does not
         // know which SIM it is dealing with will use.
         val own = ownNumberFields.firstOrNull()?.second?.text?.toString()?.trim().orEmpty()
@@ -765,6 +767,7 @@ class MainActivity : AppCompatActivity() {
             .putInt("port", port)
             .putString("user", user)
             .putString("pass", pass)
+            .putString("registrar_password", regPass)
             .putString("own_number", own)
             .also { ed ->
                 ownNumberFields.forEach { (slot, et) ->

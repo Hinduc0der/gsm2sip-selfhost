@@ -66,6 +66,67 @@ object SipAuth {
         params: AuthParams
     ): String = buildAuthHeader("INVITE", uri, username, password, params)
 
+    // ── Registrar (server) side ─────────────────────────
+    // Used when this gateway is the built-in registrar and challenges an inbound REGISTER.
+
+    private val random = java.security.SecureRandom()
+
+    /** Parse a client's Authorization header into its digest fields. */
+    fun parseAuthorization(msg: SipMessage): Map<String, String>? {
+        val h = msg.header("authorization") ?: msg.header("proxy-authorization") ?: return null
+        if (!h.trim().lowercase().startsWith("digest")) return null
+        val idx = h.lowercase().indexOf("digest")
+        val params = mutableMapOf<String, String>()
+        h.substring(idx + 6).split(",").forEach { pair ->
+            val eq = pair.indexOf('=')
+            if (eq > 0) params[pair.substring(0, eq).trim().lowercase()] =
+                pair.substring(eq + 1).trim().trim('"')
+        }
+        return params
+    }
+
+    /** A fresh opaque nonce for a challenge we issue as the registrar. */
+    fun newNonce(): String {
+        val b = ByteArray(16); random.nextBytes(b)
+        return b.joinToString("") { "%02x".format(it) }
+    }
+
+    /** WWW-Authenticate header line for a 401 we send as the registrar. */
+    fun challengeHeader(realm: String, nonce: String): String =
+        "WWW-Authenticate: Digest realm=\"$realm\", nonce=\"$nonce\", qop=\"auth\", algorithm=MD5"
+
+    /**
+     * Verify a client's parsed Authorization [params] against [password] for [method].
+     * Recomputes the digest from the username the client sent and our shared password.
+     * [nonceValid] guards against replayed/expired nonces. Constant-time response compare.
+     */
+    fun verify(
+        params: Map<String, String>,
+        method: String,
+        password: String,
+        nonceValid: (String) -> Boolean
+    ): Boolean {
+        val username = params["username"] ?: return false
+        val realm = params["realm"] ?: return false
+        val nonce = params["nonce"] ?: return false
+        val uri = params["uri"] ?: return false
+        val response = params["response"] ?: return false
+        if (!nonceValid(nonce)) return false
+        val ha1 = md5("$username:$realm:$password")
+        val ha2 = md5("$method:$uri")
+        val qop = params["qop"]; val nc = params["nc"]; val cnonce = params["cnonce"]
+        val expected = if (qop != null && nc != null && cnonce != null)
+            md5("$ha1:$nonce:$nc:$cnonce:$qop:$ha2") else md5("$ha1:$nonce:$ha2")
+        return constantTimeEquals(expected, response)
+    }
+
+    private fun constantTimeEquals(a: String, b: String): Boolean {
+        if (a.length != b.length) return false
+        var diff = 0
+        for (i in a.indices) diff = diff or (a[i].code xor b[i].code)
+        return diff == 0
+    }
+
     private fun md5(input: String): String {
         val digest = MessageDigest.getInstance("MD5")
         val bytes = digest.digest(input.toByteArray())

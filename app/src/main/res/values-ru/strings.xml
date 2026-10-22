@@ -59,6 +59,8 @@
     <string name="cfg_sip_password">Пароль SIP</string>
     <string name="cfg_hint_username">внутренний номер</string>
     <string name="cfg_hint_password">пароль</string>
+    <string name="cfg_registrar_password">Пароль для софтфона (защита регистратора)</string>
+    <string name="cfg_registrar_password_hint">Пусто = без пароля, регистрироваться может кто угодно. Задай пароль перед выходом в интернет и введи тот же пароль в софтфоне.</string>
     <string name="cfg_own_number">Свой номер (SIM)</string>
     <string name="cfg_hint_own_number">в межд. формате, напр. +4915112345678</string>
     <string name="cfg_own_number_hint_text">Отправляется как SIP-назначение, чтобы сервер сопоставил звонок с ассистентом. Без него шлюз адресует звонок своему же внутреннему номеру, и звонок зацикливается.</string>

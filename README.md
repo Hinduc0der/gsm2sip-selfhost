@@ -11,8 +11,7 @@
 - **For users:** [`docs/КАК-НАСТРОИТЬ.md`](docs/КАК-НАСТРОИТЬ.md) - the single page that's enough
   to set everything up from scratch (Russian).
 - **Reference:** [gateway app settings](#gateway-app-settings) ·
-  [baresip client](docs/client-baresip.md) · [internet and security](docs/internet-security.md)
-  (VPN as a fallback - [`docs/vpn-wireguard.md`](docs/vpn-wireguard.md)).
+  [baresip client](docs/client-baresip.md) · [internet and security](docs/internet-security.md).
 - **For developers:** [building from source](docs/build.md).
 
 A cheap old Android phone with your SIM sits at home on a charger and Wi-Fi. The incoming
@@ -77,9 +76,8 @@ LineageOS 16 (Android 9), in built-in registrar mode:
 - Self-recovery: the gateway starts itself after the phone reboots (Magisk).
 
 Not done yet: outgoing **calls** from the far phone over the gateway's SIM; wideband audio
-(currently G.711, narrowband); SIP authentication for the registrar
-(see [security](#going-to-the-internet-and-security)). The internet path (public IP, forwarding,
-STUN) is written but **not yet tested live** - LAN only.
+(currently G.711, narrowband). The internet path (public IP, forwarding, STUN) is written but
+**not yet tested live** - LAN only.
 
 ---
 
@@ -110,7 +108,7 @@ There is no external server. All SIP runs on the gateway phone itself.
 - An incoming GSM call → gsm2sip answers it, sends `INVITE` to the **first registered** softphone,
   and brings up a peer-to-peer RTP bridge. No Asterisk/PC in the path.
 - To work "while traveling" the gateway phone must be reachable from the internet - a public IP
-  with port forwarding, or a VPN (see [below](#going-to-the-internet-and-security)).
+  with port forwarding (see [below](#going-to-the-internet-and-security)).
 
 ### Where things live
 
@@ -260,18 +258,18 @@ anywhere. In short:
 3. **Enable STUN** in the app → the gateway puts its public IP in Via/Contact/SDP.
 4. Point the client at `<public IP or domain>:5062`.
 
-**The fallback is a VPN** (WireGuard) if there is no public IP or you don't want to expose SIP; the
-gateway phone can be its own VPN server. On track B the VPN still has a reply-path bug (registration
-doesn't go green yet) - see [`docs/vpn-wireguard.md`](docs/vpn-wireguard.md).
+The gateway itself is closed off by the **registrar password** (see below); no VPN is needed.
 
-> ⛔ **Security - must read.** In built-in registrar mode there is **no authentication yet** (empty
-> password). An open `:5062` on the internet is a toll-fraud risk: anyone can register as "100" and
-> intercept calls, or make the gateway send/dial over GSM (real money). A password on
-> REGISTER/INVITE and automatic source banning (like Asterisk + fail2ban) are **planned but not
-> implemented yet**; until then an **IP allow-list** on the router (or a VPN) is required. A
-> non-standard port is camouflage, not protection.
+> ⛔ **Security - must read.** An open `:5062` on the internet is a toll-fraud risk: without
+> protection anyone can register as "100" and intercept calls, or make the gateway send/dial over
+> GSM (real money). The gateway is protected by a **SIP registrar password** (digest authentication,
+> RFC 2617/3261, MD5): a missing or wrong password is rejected with 401, and **brute-force
+> protection** bans an IP for 10 minutes after 5 failed attempts in 60 seconds. The password is
+> stored in SharedPreferences (realm `gsm2sip`). An **empty password disables authentication**
+> (local network only) - for the internet a password is mandatory. A non-standard port is
+> camouflage, not protection.
 
-Full step-by-step (direct access, security, VPN as a fallback) -
+Full step-by-step (direct access, the registrar password, security) -
 [`docs/internet-security.md`](docs/internet-security.md) (Russian).
 
 ---
@@ -297,8 +295,8 @@ backslashes in `local.properties`, a failing `lintVital`, MSYS path conversion) 
   next step when the phone moves to a location with a public IP.
 - **Debug build:** verbose SIP logs (`SipWire`) are on and the RTP silence timeout is raised to 1
   hour (`RTP_TIMEOUT_MS` in `RtpSession.kt`). Revert before a "release" (drop the log, timeout → 30 s).
-- **The main production risk** is an open `:5062` with no auth. Registrar SIP authentication is a
-  deliberate TODO; until then, only VPN or an IP allow-list.
+- **Registrar SIP authentication is implemented** (digest password + brute-force ban); for the
+  internet, set a password - an empty password leaves `:5062` open.
 
 ### Rollback point
 

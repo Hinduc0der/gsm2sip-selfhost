@@ -59,6 +59,8 @@
     <string name="cfg_sip_password">SIP Password</string>
     <string name="cfg_hint_username">extension</string>
     <string name="cfg_hint_password">password</string>
+    <string name="cfg_registrar_password">Softphone password (registrar auth)</string>
+    <string name="cfg_registrar_password_hint">Empty = no password, anyone may register. Set one before exposing the gateway to the internet, and enter the same password in your softphone.</string>
     <string name="cfg_own_number">Own Number (SIM)</string>
     <string name="cfg_hint_own_number">international, e.g. +4915112345678</string>
     <string name="cfg_own_number_hint_text">Sent as the SIP destination so the server can map the call to an assistant. Without it the gateway addresses its own extension and the call loops back.</string>

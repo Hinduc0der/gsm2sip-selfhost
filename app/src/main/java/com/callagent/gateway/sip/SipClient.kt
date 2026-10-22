@@ -41,7 +41,13 @@ class SipClient(
     /** Act as the SIP registrar/UAS itself: accept inbound REGISTER from a
      *  softphone and place GSM→SIP calls straight to it, with no external
      *  server or proxy in the signalling path ("device in itself"). */
-    val builtinRegistrar: Boolean = false
+    val builtinRegistrar: Boolean = false,
+    /** Registrar mode: password the softphone must present to REGISTER (SIP digest auth).
+     *  Empty = no authentication (anyone who reaches the port can register and dial out) —
+     *  set one before exposing the gateway to the internet. */
+    val registrarPassword: String = "",
+    /** Registrar mode: realm advertised in the auth challenge. */
+    val registrarRealm: String = "gsm2sip"
 ) {
     /**
      * Whether this call leg may use SRTP at all.
@@ -88,6 +94,16 @@ class SipClient(
         val address: Pair<String, Int>, val expiresAt: Long
     )
     private val registrations = ConcurrentHashMap<String, Registration>()
+
+    // Registrar auth (server mode). Nonces issued for challenges, plus a per-IP brute-force ban.
+    private val issuedNonces = ConcurrentHashMap<String, Long>()   // nonce -> issuedAt (ms)
+    private val authLock = Any()
+    private val authFailTimes = HashMap<String, ArrayDeque<Long>>() // IP -> recent fail times (under authLock)
+    private val authBanUntil = HashMap<String, Long>()              // IP -> banned until ms (under authLock)
+    private val nonceTtlMs = 300_000L
+    private val authMaxFails = 5
+    private val authFailWindowMs = 60_000L
+    private val authBanMs = 600_000L
     /** The live softphone registration, if any (registrar mode). */
     fun currentRegistration(): Registration? {
         val t = System.currentTimeMillis()
@@ -508,7 +524,73 @@ class SipClient(
      * is what a real registrar latches onto, and it is where ACK/BYE for the
      * call must go so the dialog completes.
      */
+    /**
+     * Challenge/verify an inbound REGISTER when a registrar password is set. Returns true to let it
+     * through, false when handled here (401 sent, or silently dropped as banned/over-limit).
+     */
+    private fun registrarAuthPassed(msg: SipMessage, address: Pair<String, Int>): Boolean {
+        if (registrarPassword.isEmpty()) return true
+        val ip = address.first
+        val now = System.currentTimeMillis()
+        synchronized(authLock) {
+            authBanUntil[ip]?.let { until ->
+                if (now < until) {
+                    Log.w(TAG, "REGISTER from banned $ip dropped (${(until - now) / 1000}s left)")
+                    return false
+                }
+                authBanUntil.remove(ip); authFailTimes.remove(ip)
+            }
+        }
+        val authHeader = msg.header("authorization")
+        val params = SipAuth.parseAuthorization(msg)
+        val ok = params != null && SipAuth.verify(params, "REGISTER", registrarPassword) { nonce ->
+            val issuedAt = issuedNonces[nonce]
+            issuedAt != null && now - issuedAt <= nonceTtlMs
+        }
+        if (ok) {
+            synchronized(authLock) { authFailTimes.remove(ip); authBanUntil.remove(ip) }
+            return true
+        }
+        // A credential-bearing REGISTER that failed counts toward the ban; a first, challenge-less
+        // REGISTER does not (that is the normal start of the digest handshake).
+        if (authHeader != null && registrarAuthFailed(ip, now)) {
+            uiLog("Registrar: brute-force from $ip — banned for ${authBanMs / 1000}s")
+            return false
+        }
+        val nonce = issueNonce(now)
+        sendTo(
+            SipBuilder.statusResponse(
+                msg, 401, "Unauthorized",
+                listOf(SipAuth.challengeHeader(registrarRealm, nonce))
+            ),
+            address
+        )
+        uiLog("Registrar: REGISTER challenged (${if (authHeader == null) "no credentials" else "bad credentials"}) from $ip")
+        return false
+    }
+
+    /** Record a failed auth from [ip]; returns true once the window is over the limit (now banned). */
+    private fun registrarAuthFailed(ip: String, now: Long): Boolean = synchronized(authLock) {
+        val times = authFailTimes.getOrPut(ip) { ArrayDeque() }
+        times.addLast(now)
+        while (times.isNotEmpty() && now - times.first() > authFailWindowMs) times.removeFirst()
+        if (times.size >= authMaxFails) {
+            authBanUntil[ip] = now + authBanMs
+            authFailTimes.remove(ip)
+            true
+        } else false
+    }
+
+    /** Issue a fresh nonce, pruning expired ones so the map cannot grow without bound. */
+    private fun issueNonce(now: Long): String {
+        issuedNonces.entries.removeAll { now - it.value > nonceTtlMs }
+        val nonce = SipAuth.newNonce()
+        issuedNonces[nonce] = now
+        return nonce
+    }
+
     private fun handleInboundRegister(msg: SipMessage, address: Pair<String, Int>) {
+        if (!registrarAuthPassed(msg, address)) return
         val aor = msg.to?.let { msg.extractUser(it) }
             ?: msg.from?.let { msg.extractUser(it) }
         if (aor == null) {
