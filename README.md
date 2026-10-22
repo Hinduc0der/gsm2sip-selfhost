@@ -1,326 +1,301 @@
-# gsm2sip-selfhost — телефон-шлюз «устройство в себе» для старых Qualcomm-трубок (root)
+# gsm2sip-selfhost — a "device-in-itself" phone gateway for old rooted Qualcomm phones
 
-> **English, in one paragraph.** This is a fork of
-> [pulpoff/gsm2sip](https://github.com/pulpoff/gsm2sip) (MIT) that adds a **built-in SIP
-> registrar** so the gateway needs **no external PBX/Asterisk and no PC** — a softphone
-> registers straight to the phone, and incoming GSM calls and SMS are bridged to it over
-> the internet. It targets **cheap, old, rooted Qualcomm phones** (LineageOS + Magisk),
-> e.g. the Samsung S4 mini. The rest of this document is in Russian, matching the project.
-> See [`README.upstream.md`](README.upstream.md) for the original project's README.
+> 🇷🇺 **[Русская версия →](README.ru.md)** (fuller, with the project's own notes) ·
+> 🇬🇧 English (this file). Original project README: [`README.upstream.md`](README.upstream.md).
 
-Старый дешёвый Android-телефон с SIM лежит дома на зарядке и Wi-Fi. Входящие голосовые
-вызовы и SMS, приходящие на его номер, он сам отдаёт через интернет на твой телефон — где
-бы ты ни был. **Ни ПК, ни Asterisk, ни внешнего сервера не нужно:** SIP-сервер встроен
-прямо в приложение на телефоне-шлюзе.
+A cheap old Android phone with your SIM sits at home on a charger and Wi-Fi. The incoming
+**voice calls and SMS** that arrive on its number are relayed to your phone over the internet —
+wherever you are. **No PC, no Asterisk, no external server:** the SIP server is built into the
+app on the gateway phone itself.
 
 ```
-Звонящий ──GSM──► Телефон-шлюз (SIM + gsm2sip)                Твой телефон (софтфон)
-                   ├─ встроенный SIP-регистратор  :5062  ◄──REGISTER── где угодно
-                   ├─ мост GSM ↔ SIP (сам снимает трубку)
-                   ├─ входящая SMS → SIP MESSAGE ───────────► чат софтфона
-                   └─ RTP (G.711) ──────────────────────────► звук в обе стороны
-                                                     ◄───────── ответная SMS / голос
+Caller ──GSM──► Gateway phone (SIM + gsm2sip)                 Your phone (softphone)
+                 ├─ built-in SIP registrar  :5062  ◄──REGISTER── anywhere
+                 ├─ GSM ↔ SIP bridge (answers the call itself)
+                 ├─ incoming SMS → SIP MESSAGE ─────────────────► softphone chat
+                 └─ RTP (G.711) ────────────────────────────────► two-way audio
+                                                       ◄───────── SMS reply / voice
 ```
 
-Это **трек B** большого проекта «переадресация». Трек A (форк
-[android-voice-sip-agent](https://github.com/sparkcyf/android-voice-sip-agent), без root,
-Android 13+) — в отдельном репозитории `voice-sip-agent-selfhost`. Какой трек подходит
-конкретной трубке, подскажет [сортировщик](#требования-к-аппарату).
+This is **track B** of the larger "переадресация" project. Track A (a fork of
+[android-voice-sip-agent](https://github.com/sparkcyf/android-voice-sip-agent), **no root**,
+Android 13+) lives in the separate `voice-sip-agent-selfhost` repository. Which track fits a
+given phone is decided by the [triage script](#hardware-requirements).
 
 ---
 
-## Содержание
+## Who it's for
 
-- [Кому и зачем это нужно](#кому-и-зачем-это-нужно)
-- [Что уже работает](#что-уже-работает)
-- [Чем этот форк отличается от upstream](#чем-этот-форк-отличается-от-upstream)
-- [Архитектура «устройство в себе»](#архитектура-устройство-в-себе)
-- [Требования к аппарату](#требования-к-аппарату)
-- [Прошивка чистого аппарата](#прошивка-чистого-аппарата)
-- [Установка серверной части (Magisk)](#установка-серверной-части-magisk)
-- [Настройки приложения-шлюза](#настройки-приложения-шлюза)
-- [Рекомендуемый клиент — baresip](#рекомендуемый-клиент--baresip) → подробно в [`docs/client-baresip.md`](docs/client-baresip.md)
-- [Вывод в интернет и безопасность](#вывод-в-интернет-и-безопасность) → подробно в [`docs/internet-security.md`](docs/internet-security.md)
-- [Сборка из исходников](#сборка-из-исходников) → подробно в [`docs/build.md`](docs/build.md)
-- [Честный статус и риски](#честный-статус-и-риски)
-- [Лицензия и благодарности](#лицензия-и-благодарности)
+Your home number (SIM) anchors your bank, government services, 2FA codes, and calls from family
+and services — carrying it around is both inconvenient and risky. This gateway keeps the SIM
+**at home** and delivers its calls and SMS to you over the internet, on any phone, wherever you
+are.
 
----
+- **Vacation / business trip.** No roaming, no missed incoming on your home number, no changing
+  numbers. On the road your phone carries a local eSIM or a second SIM for data only; the home
+  SIM stays in the gateway at home.
+- **Long relocation / living abroad** (expat, student, rotational work). Your home number stays
+  "alive" and tied to your accounts while you are in another country: bank calls and SMS codes
+  arrive as before.
+- **Safety on the street.** If your phone is stolen or snatched in an unfamiliar city, the home
+  SIM **isn't in it** — it's at home. The thief gets no access to your number, can't intercept
+  SMS codes, can't reset passwords by SMS, and can't reach SIM-bound accounts or your bank. The
+  stolen phone holds only a local data eSIM or an "empty" second SIM with no important bindings.
+- **Privacy and control.** A "device-in-itself": the SIP server lives inside the gateway phone,
+  audio and messages go straight to your softphone — no clouds, no third-party servers, nothing
+  leaves to anyone else.
 
-## Кому и зачем это нужно
-
-Домашний номер (SIM) держит привязки к банкам, госуслугам, 2FA-кодам, звонкам родных и служб —
-возить его с собой неудобно и небезопасно. Шлюз оставляет SIM **дома**, а звонки и SMS с неё
-доставляет тебе через интернет на любой телефон, где бы ты ни был.
-
-- **Отпуск / командировка / поездка.** Без роуминга, без потери входящих на домашний номер, без
-  смены номера. В твоём телефоне в поездке — местная eSIM или вторая SIM только для интернета;
-  домашняя SIM лежит дома в шлюзе.
-- **Долгий переезд / жизнь за границей** (экспат, студент, вахта). Домашний номер остаётся «живым»
-  и привязанным к твоим аккаунтам, пока ты в другой стране: звонки из банка и SMS-коды приходят
-  как раньше.
-- **Безопасность на улице.** Украли или отобрали телефон в чужом городе — а домашней SIM в нём
-  **нет**, она дома. Вор не получит твой номер, не перехватит SMS-коды, не восстановит пароли по
-  SMS и не доберётся до привязанных к SIM аккаунтов и банка. В украденном аппарате — только
-  местная интернет-eSIM или «пустая» вторая SIM без важных привязок.
-- **Приватность и контроль.** «Устройство в себе»: SIP-сервер внутри самого телефона-шлюза, звук
-  и сообщения идут напрямую к твоему софтфону — без облаков и чужих серверов, ничего не уходит
-  третьей стороне.
-
-**Кому:** путешественникам и цифровым кочевникам, экспатам, вахтовикам, студентам за рубежом; всем,
-кто держит «якорный» номер для банков и госуслуг и не хочет возить его с собой; тем, кто ценит
-приватность (нет внешнего сервера).
+**For:** travelers and digital nomads, expats, rotational workers, students abroad; anyone who
+keeps an "anchor" number for banks and government services and doesn't want to carry it; and
+anyone who values privacy (no external server).
 
 ---
 
-## Что уже работает
+## What already works
 
-✅ **Двусторонний звук подтверждён 22.10.2026** на Samsung S4 mini GT-I9190 (`serrano3g`),
-LineageOS 16 (Android 9), в режиме встроенного регистратора:
+✅ **Two-way audio confirmed on 2026-10-22** on a Samsung S4 mini GT-I9190 (`serrano3g`),
+LineageOS 16 (Android 9), in built-in registrar mode:
 
-- Входящий GSM-вызов на SIM шлюза → звонок поднимается на софтфоне, звук идёт **в обе
-  стороны**, разрыв с любой стороны корректно кладёт вызов.
-- Входящая **SMS** → приходит в чат софтфона, кириллица декодируется верно.
-- **Исходящая SMS** из софтфона → уходит через GSM, GSM подтверждает доставку
+- Incoming GSM call to the gateway's SIM → the call rings on the softphone, audio flows **both
+  ways**, hanging up from either side ends the call cleanly.
+- Incoming **SMS** → arrives in the softphone chat, Cyrillic decodes correctly.
+- **Outgoing SMS** from the softphone → goes out over GSM, the network confirms delivery
   (`delivered, deliveredOk:1`).
-- **Ответ** на входящую SMS в той же ветке чата → доходит (фикс v1.3.11, см. ниже).
-- Самовосстановление: шлюз стартует сам после перезагрузки телефона (Magisk).
+- **Reply** to an incoming SMS in the same chat thread → delivered (v1.3.11 fix, see below).
+- Self-recovery: the gateway starts itself after the phone reboots (Magisk).
 
-Пока **не** сделано: исходящие **звонки** с дальнего телефона через SIM шлюза;
-широкополосный звук (сейчас G.711, узкополосный); SIP-аутентификация регистратора
-(см. [безопасность](#вывод-в-интернет-и-безопасность)). Интернет-часть (белый IP, пробросы,
-STUN) написана, но **ещё не проверена вживую** — только LAN.
-
----
-
-## Чем этот форк отличается от upstream
-
-Штатный [gsm2sip](https://github.com/pulpoff/gsm2sip) регистрируется на **внешний**
-SIP-сервер (Asterisk и т.п.). Наш форк добавляет режим **встроенного регистратора** — идея
-перенесена из трека A:
-
-- приложение само принимает `REGISTER` на `:5062`, запоминает адрес софтфона и
-  маршрутизирует входящий GSM-вызов и входящую SMS **прямо на него**;
-- режим включён **по умолчанию** (`builtin_registrar=true`), внешний сервер не нужен;
-- исходящая SMS из софтфона принимается и как `text/plain`, и в конверте **CPIM**
-  (RFC 3862), квитанции **IMDN** (RFC 5438) подтверждаются без лишней отправки;
-- `From` доставленной SMS несёт порт регистратора (`:5062`), чтобы **ответ** клиента
-  вернулся на шлюз, а не ушёл в никуда на `:5060` (фикс v1.3.11).
-
-Остальная механика (мост GSM↔SIP, RTP, Magisk-модуль с правами и управлением ALSA-микшером)
-— от upstream.
+Not done yet: outgoing **calls** from the far phone over the gateway's SIM; wideband audio
+(currently G.711, narrowband); SIP authentication for the registrar
+(see [security](#going-to-the-internet-and-security)). The internet path (public IP, forwarding,
+STUN) is written but **not yet tested live** — LAN only.
 
 ---
 
-## Архитектура «устройство в себе»
+## How this fork differs from upstream
 
-Внешнего сервера нет. Весь SIP — на самом телефоне-шлюзе.
+Stock [gsm2sip](https://github.com/pulpoff/gsm2sip) registers to an **external** SIP server
+(Asterisk, etc.). This fork adds a **built-in registrar** mode — the idea carried over from
+track A:
 
-- Софтфон регистрируется **прямо на телефон-шлюз** (его IP, порт `5062/UDP`).
-- Входящий GSM-вызов → gsm2sip сам отвечает, шлёт `INVITE` **первому зарегистрированному**
-  софтфону, поднимает RTP-мост peer-to-peer. Никакого Asterisk/ПК в тракте.
-- Для работы «из поездки» телефон-шлюз должен быть доступен из интернета — белый IP и
-  проброс портов, либо VPN (см. [раздел](#вывод-в-интернет-и-безопасность)).
+- the app accepts `REGISTER` on `:5062` itself, remembers the softphone's address, and routes
+  the incoming GSM call and incoming SMS **straight to it**;
+- the mode is **on by default** (`builtin_registrar=true`), no external server needed;
+- outgoing SMS from the softphone is accepted both as `text/plain` and inside a **CPIM**
+  envelope (RFC 3862), and **IMDN** receipts (RFC 5438) are acknowledged without a spurious send;
+- the `From` of a delivered SMS carries the registrar port (`:5062`) so the client's **reply**
+  comes back to the gateway instead of vanishing on `:5060` (v1.3.11 fix).
 
-### Где что лежит
+The rest (GSM↔SIP bridge, RTP, the Magisk module with permissions and ALSA mixer control) is
+from upstream.
 
-«Логика — вся в APK» (`com.callagent.gateway`): регистратор, мост, RTP. **Но** приложению
-нужны системные права и снятые аудио-ограничения — это даёт **Magisk-модуль**. Поэтому
-«серверная часть» = APK + Magisk-модуль, они едут вместе в одном `gateway-magisk.zip`.
+---
 
-| Компонент | Где | Что делает |
+## Architecture: "device-in-itself"
+
+There is no external server. All SIP runs on the gateway phone itself.
+
+- The softphone registers **straight to the gateway phone** (its IP, port `5062/UDP`).
+- An incoming GSM call → gsm2sip answers it, sends `INVITE` to the **first registered** softphone,
+  and brings up a peer-to-peer RTP bridge. No Asterisk/PC in the path.
+- To work "while traveling" the gateway phone must be reachable from the internet — a public IP
+  with port forwarding, or a VPN (see [below](#going-to-the-internet-and-security)).
+
+### Where things live
+
+"All the logic is in the APK" (`com.callagent.gateway`): registrar, bridge, RTP. **But** the app
+needs system permissions and the audio restrictions lifted — that is what the **Magisk module**
+does. So the "server part" = APK + Magisk module, shipped together in one `gateway-magisk.zip`.
+
+| Component | Where | What it does |
 |---|---|---|
-| SIP-регистратор + мост + RTP | APK `com.callagent.gateway` | вся логика шлюза |
-| Magisk-модуль `sip-gsm-gateway` | `/data/adb/modules/sip-gsm-gateway/` | ставит APK как priv-app, выдаёт права, снимает аудио-ограничения |
+| SIP registrar + bridge + RTP | APK `com.callagent.gateway` | all gateway logic |
+| Magisk module `sip-gsm-gateway` | `/data/adb/modules/sip-gsm-gateway/` | installs the APK as a priv-app, grants permissions, lifts audio restrictions |
 | `privapp-permissions-gateway.xml` | → `/system/etc/permissions/` | `CAPTURE_AUDIO_OUTPUT`, `MODIFY_PHONE_STATE`, `CALL_PRIVILEGED`, `BIND_INCALL_SERVICE`… |
-| `system.prop` | модуль | `voice.*.conc.disabled=false` (VoIP-звук во время GSM), выключение Fluence |
-| `tinymix` / `tinymix32` | → `/data/local/tmp/` | управление ALSA-микшером (маршрут звука на MSM8930) |
-| `install.sh` / `service.sh` | модуль | ставит APK, прячет PermissionController, на каждой загрузке выдаёт runtime-права |
-| Настройки (кодек/STUN/…) | `shared_prefs/gateway.xml` | конфиг |
+| `system.prop` | module | `voice.*.conc.disabled=false` (VoIP audio during GSM), Fluence off |
+| `tinymix` / `tinymix32` | → `/data/local/tmp/` | ALSA mixer control (audio route on MSM8930) |
+| `install.sh` / `service.sh` | module | installs the APK, hides PermissionController, re-grants runtime perms on each boot |
+| Settings (codec/STUN/…) | `shared_prefs/gateway.xml` | config |
 
-> ⚠ **Таблица регистраций живёт в ОЗУ процесса.** После перезагрузки шлюза (или рестарта
-> приложения) привязки стираются, и софтфон не получит звонок, пока не перерегистрируется.
-> Поэтому у клиента ставим **короткий интервал регистрации** (120–300 с). Это же освежает
-> NAT-привязку в интернете.
+> ⚠ **The registration table lives in process RAM.** After the gateway reboots (or the app
+> restarts) the bindings are gone, and the softphone won't get a call until it re-registers. So
+> set a **short registration interval** on the client (120–300 s). It also refreshes the NAT
+> binding over the internet.
 
 ---
 
-## Требования к аппарату
+## Hardware requirements
 
-- **Qualcomm**, НЕ Exynos (на Exynos нужного аудио-тракта нет — проверено автором gsm2sip на S10e).
-- **LineageOS + Magisk** (на стоке нужного тракта обычно нет; у S4 mini `incall_music`
-  появляется именно на LineageOS).
-- SIM с голосом, стабильный Wi-Fi, постоянная зарядка.
-- Это должен быть **отдельный «дежурный» аппарат** без личных данных: он живёт рутованным и
-  доступным из сети.
+- **Qualcomm**, NOT Exynos (no suitable call-audio path on Exynos — verified by the gsm2sip author on an S10e).
+- **LineageOS + Magisk** (stock usually lacks the needed audio path; on the S4 mini `incall_music`
+  appears specifically on LineageOS).
+- A voice SIM, stable Wi-Fi, permanent charging.
+- This should be a **dedicated "duty" phone** with no personal data: it lives rooted and reachable.
 
-Проверено живым звонком:
+Confirmed with a live call:
 
-| Аппарат | Кодовое имя | Чип | ОС |
+| Phone | Codename | Chip | OS |
 |---|---|---|---|
-| Xiaomi Poco X3 NFC | `surya` | SM6150/SM7150 | эталон автора gsm2sip |
-| Samsung S4 mini GT-I9195 | `serranolte` | MSM8960 | LineageOS 16 (автор gsm2sip) |
-| **Samsung S4 mini GT-I9190** | `serrano3g` | MSM8930/WCD9304 | **наш аппарат, двусторонний звук 22.10.2026** |
+| Xiaomi Poco X3 NFC | `surya` | SM6150/SM7150 | the gsm2sip author's reference |
+| Samsung S4 mini GT-I9195 | `serranolte` | MSM8960 | LineageOS 16 (gsm2sip author) |
+| **Samsung S4 mini GT-I9190** | `serrano3g` | MSM8930/WCD9304 | **our unit, two-way audio 2026-10-22** |
 
-**Сортировщик трубок** (быстрый отсев без установки) —
-`triage/check-phone.sh` в большом проекте: подключаешь аппарат по USB (отладка включена),
-`bash check-phone.sh` → «КАНДИДАТ/МИМО» + рут-сигналы + рекомендованный трек (A/B).
+**Triage script** (quick elimination without installing) — `triage/check-phone.sh` in the larger
+project: connect the phone over USB (debugging on), run `bash check-phone.sh` → "CANDIDATE/NOPE" +
+root signals + the recommended track (A/B).
 
 ---
 
-## Прошивка чистого аппарата
+## Flashing a clean phone
 
-На примере S4 mini GT-I9190 (`serrano3g`). Рут и прошивка — общая часть любого трека B.
+Example: S4 mini GT-I9190 (`serrano3g`). Root and flashing are common to any track B.
 
-| Файл | Что | Источник |
+| File | What | Source |
 |---|---|---|
-| `Magisk-v30.7.apk` | root поверх LineageOS | github.com/topjohnwu/Magisk |
-| `gateway-magisk.zip` | gsm2sip: APK + права + tinymix | наша сборка (`./build.sh release`) |
-| `twrp-3.7.0_9-0-serrano3gxx.img` | рекавери | dl.twrp.me/serrano3gxx |
-| `lineage-16.0-…-serrano3gxx.zip` | ROM (Android 9) | lineageos / зеркала |
+| `Magisk-v30.7.apk` | root on top of LineageOS | github.com/topjohnwu/Magisk |
+| `gateway-magisk.zip` | gsm2sip: APK + perms + tinymix | our build (`./build.sh release`) |
+| `twrp-3.7.0_9-0-serrano3gxx.img` | recovery | dl.twrp.me/serrano3gxx |
+| `lineage-16.0-…-serrano3gxx.zip` | ROM (Android 9) | lineageos / mirrors |
 
-GApps не нужны. Шаги (режимы — по adb, Odin — GUI):
+No GApps needed. Steps (modes via adb, Odin is a GUI):
 
-1. **Download mode:** `adb reboot download` (или Vol Down + Home + Power).
-2. **TWRP через Odin:** упаковать `.img` в `.tar` (`tar -H ustar -cf recovery.tar twrp-…img`),
-   Odin3 → слот **AP** = этот `.tar` → **Start**.
-3. **Сразу в рекавери** (чтобы сток не затёр TWRP): `adb reboot recovery`.
-4. **В TWRP:** Wipe (data/cache/system) → установить **LineageOS 16** (`adb sideload <ros.zip>`),
-   перезагрузиться, первично настроить.
-5. **Root:** поставить `Magisk-v30.7.apk`, дать root.
+1. **Download mode:** `adb reboot download` (or Vol Down + Home + Power).
+2. **TWRP via Odin:** pack the `.img` into a `.tar` (`tar -H ustar -cf recovery.tar twrp-…img`),
+   Odin3 → **AP** slot = this `.tar` → **Start**.
+3. **Straight into recovery** (so stock doesn't overwrite TWRP): `adb reboot recovery`.
+4. **In TWRP:** Wipe (data/cache/system) → install **LineageOS 16** (`adb sideload <ros.zip>`),
+   reboot, do first-time setup.
+5. **Root:** install `Magisk-v30.7.apk`, grant root.
 
-Контрольная точка железа (до всего остального): `tools/check-device.sh` (нужен root) — смотрит
-HAL-микшеры и тракт захвата. Если тракта нет — трек B на этом аппарате закрыт по железу.
-
----
-
-## Установка серверной части (Magisk)
-
-Аппарат уже прошит LineageOS 16 + Magisk, нужно поставить только наш софт. Внешнего сервера нет.
-
-1. **Собрать модуль** (на ПК): в корне репозитория `./build.sh release` (JDK 17, Android SDK) →
-   на выходе `gateway-magisk.zip` — это APK, права и tinymix вместе. Подробнее и про грабли
-   сборки — [`docs/build.md`](docs/build.md).
-   > ABI: `tinymix` собран под обе архитектуры; `install.sh` кладёт нужный по
-   > `ro.product.cpu.abi`. S4 mini — 32-битный (`armeabi-v7a`).
-2. **Поставить Magisk-модуль:** скопировать `gateway-magisk.zip` на телефон → Magisk → Модули →
-   установить из файла → **перезагрузка**. Модуль сам поставит APK системным priv-app, выдаст
-   права, снимет аудио-ограничения, положит `tinymix`, спрячет PermissionController.
-3. **Телефон по умолчанию:** Настройки → Приложения → По умолчанию → Телефон → **gsm2sip**.
-   Без этого приложение не будет само отвечать на GSM-вызовы.
-4. **Проверить права** (по желанию, adb+root):
-   `dumpsys package com.callagent.gateway | grep -E "CAPTURE_AUDIO_OUTPUT|RECORD_AUDIO"` —
-   должны быть `granted=true`. В журнале Magisk тег `GatewayMagisk` пишет весь ход.
-5. **Открыть приложение, настроить** (ниже). В режиме «в себе» SIP-сервер/логин/пароль не нужны.
-
-**Обновление APK без перепрошивки модуля:** `adb install -r app-release.apk` + перезагрузка
-(на следующей загрузке `service.sh` синхронизирует APK в priv-app). Подпись должна совпадать с
-установленной (мы подписываем debug-ключом — намеренно, чтобы подпись не менялась).
+Hardware checkpoint (before anything else): `tools/check-device.sh` (needs root) — inspects the
+HAL mixers and the capture path. No path → track B is closed on this phone by hardware.
 
 ---
 
-## Настройки приложения-шлюза
+## Installing the server part (Magisk)
 
-Открывается шестерёнкой справа вверху. Для режима «устройство в себе»:
+The phone is already flashed with LineageOS 16 + Magisk; you only install our software. There is
+no external server.
 
-| Пункт | Значение | Зачем |
+1. **Build the module** (on a PC): in the repo root, `./build.sh release` (JDK 17, Android SDK) →
+   produces `gateway-magisk.zip` — the APK, permissions and tinymix together. More, plus build
+   gotchas, in [`docs/build.md`](docs/build.md) (Russian).
+   > ABI: `tinymix` is built for both architectures; `install.sh` places the right one by
+   > `ro.product.cpu.abi`. The S4 mini is 32-bit (`armeabi-v7a`).
+2. **Install the Magisk module:** copy `gateway-magisk.zip` to the phone → Magisk → Modules →
+   install from file → **reboot**. The module installs the APK as a system priv-app, grants perms,
+   lifts audio restrictions, places `tinymix`, and hides PermissionController.
+3. **Default phone app:** Settings → Apps → Default apps → Phone → **gsm2sip**. Without this the
+   app won't answer GSM calls by itself.
+4. **Check permissions** (optional, adb+root):
+   `dumpsys package com.callagent.gateway | grep -E "CAPTURE_AUDIO_OUTPUT|RECORD_AUDIO"` — should be
+   `granted=true`. The Magisk log tag `GatewayMagisk` traces the whole run.
+5. **Open the app, configure it** (below). In "device-in-itself" mode no SIP server/login/password
+   is needed.
+
+**Updating the APK without re-flashing the module:** `adb install -r app-release.apk` + reboot (on
+the next boot `service.sh` syncs the APK into priv-app). The signature must match the installed one
+(we sign with the debug key on purpose, so the signature stays identical).
+
+---
+
+## Gateway app settings
+
+Opened via the gear at top right. For "device-in-itself" mode:
+
+| Item | Value | Why |
 |---|---|---|
-| Встроенный регистратор | **включён** (по умолчанию) | приложение само принимает REGISTER на `:5062` |
-| SIP server / port / user / pass | можно не трогать | в режиме регистратора не используются |
-| Own Number | любое (мы ставили `100`) | в режиме регистратора **не влияет** на выбор софтфона: шлюз звонит ПЕРВОЙ живой регистрации |
-| Codec | G.711 (PCMA/PCMU) надёжнее для узкого канала; G.722 — шире полоса | в логе звонка был `pt=8` (PCMA) |
-| **STUN (`use_stun`)** | **выкл для LAN, вкл для интернета** | выкл → анонсирует `localIp`; вкл → публичный IP (см. [интернет](#вывод-в-интернет-и-безопасность)) |
+| Built-in registrar | **on** (default) | the app accepts REGISTER on `:5062` itself |
+| SIP server / port / user / pass | leave as-is | unused in registrar mode |
+| Own Number | anything (we used `100`) | in registrar mode it does **not** affect softphone selection: the gateway calls the FIRST live registration |
+| Codec | G.711 (PCMA/PCMU) is safer on a narrow link; G.722 is wider | the call log showed `pt=8` (PCMA) |
+| **STUN (`use_stun`)** | **off for LAN, on for internet** | off → advertises `localIp`; on → public IP (see [internet](#going-to-the-internet-and-security)) |
 
-Порт регистратора **5062** зашит в коде (`localPort`). Диапазон RTP — UDP **30000–40000**
-(чётные), `RTP_PORT_MIN/MAX` в `CallOrchestrator.kt`.
-
----
-
-## Рекомендуемый клиент — baresip
-
-На дальнем телефоне нужен SIP-софтфон. **Рекомендуем [baresip](https://github.com/baresip/baresip-studio)**
-(`com.tutpro.baresip`, F-Droid): бесплатный libre-клиент, который **всегда** умеет page-mode
-`MESSAGE` (RFC 3428) и держит несколько аккаунтов. **Linphone 6.2.x не подошёл** — его новый
-интерфейс не отправляет обычный page-mode MESSAGE на произвольный номер (заточен под
-Flexisip/шифрованный чат), поэтому исходящие SMS из него не уходили.
-
-Быстрая настройка аккаунта: меню ⋮ → «Профили» → поле «SIP URI или Новый аккаунт» →
-`sip:100@<IP-шлюза>:5062` → «+» → включить тумблер **«Регистрация»** (интервал 900).
-Пароль/прокси/username не нужны.
-
-> ⚠ **Порт `:5062` обязателен прямо в AoR** — иначе и REGISTER, и MESSAGE уйдут на `:5060`,
-> где никто не слушает.
-
-Схема с **двумя SIM — один софтфон, два аккаунта** (вторая SIM в телефоне трека A):
-`sip:100@<IP-шлюза-B>:5062` и `sip:s23@<IP-шлюза-A>:5062` — оба в «Профили», у обоих
-«Регистрация» включена.
-
-Полная инструкция (две SIM, ответы на SMS, альтернативные клиенты, грабли) —
-[`docs/client-baresip.md`](docs/client-baresip.md).
+The registrar port **5062** is hardcoded (`localPort`). RTP range — UDP **30000–40000** (even),
+`RTP_PORT_MIN/MAX` in `CallOrchestrator.kt`.
 
 ---
 
-## Вывод в интернет и безопасность
+## Recommended client — baresip
 
-Телефон-шлюз за роутером с **белым (без CGNAT) IP**; софтфон — где угодно. Кратко:
+The far phone needs a SIP softphone. We recommend
+**[baresip](https://f-droid.org/packages/com.tutpro.baresip/)** (`com.tutpro.baresip`, F-Droid):
+a free libre client that **always** sends page-mode `MESSAGE` (RFC 3428) and holds several
+accounts. **Linphone 6.2.x did not work out** — its new UI won't send a plain page-mode MESSAGE to
+an arbitrary number (built around Flexisip/encrypted chat), so outgoing SMS never left it.
 
-1. **DHCP-резервация** LAN-адреса шлюза по MAC — чтобы не менялся.
-2. **Проброс UDP** на роутере: `5062` (SIP) и `30000–40000` (RTP) на LAN-адрес шлюза.
-   RTP — **1:1, те же номера портов** (без трансляции, иначе звук уйдёт не туда).
-3. **STUN включить** в приложении → шлюз подставит публичный IP в Via/Contact/SDP.
-4. Клиент нацелить на `<белый IP или домен>:5062`.
+Quick account setup: ⋮ → "Accounts" → the "SIP URI or New account" field →
+`sip:100@<gateway-IP>:5062` → "+" → enable the **"Register"** toggle (interval 900).
+No password/proxy/username needed.
 
-> ⛔ **Безопасность — обязательно к прочтению.** В режиме встроенного регистратора
-> **аутентификации нет** (пароль пустой). Открытый в интернет `5062` — это toll-fraud риск:
-> чужой может зарегистрироваться как «100» и перехватывать звонки, либо заставить шлюз звонить
-> по GSM наружу (реальные деньги). **Рекомендуемый вариант — не светить SIP наружу, а поднять
-> VPN (WireGuard)** между локацией шлюза и телефоном: пробросы не нужны, STUN можно выключить,
-> `5062`/RTP слушать только на VPN-интерфейсе. Альтернатива — allow-list по IP на роутере.
+> ⚠ **The `:5062` port is mandatory right in the AoR** — otherwise both REGISTER and MESSAGE go to
+> `:5060`, where nothing is listening.
 
-Подробно (пошагово, с проверкой по журналу) — [`docs/internet-security.md`](docs/internet-security.md).
+Full client guide (two SIMs, SMS replies, alternatives, gotchas) —
+[`docs/client-baresip.md`](docs/client-baresip.md) (Russian).
 
 ---
 
-## Сборка из исходников
+## Going to the internet, and security
+
+The gateway phone is behind a router with a **public (non-CGNAT) IP**; the softphone is anywhere.
+In short:
+
+1. **DHCP reservation** for the gateway's LAN address by MAC — so it doesn't change.
+2. **UDP forwarding** on the router: `5062` (SIP) and `30000–40000` (RTP) to the gateway's LAN
+   address. RTP must be **1:1, same port numbers** (no translation, or audio goes to the wrong place).
+3. **Enable STUN** in the app → the gateway puts its public IP in Via/Contact/SDP.
+4. Point the client at `<public IP or domain>:5062`.
+
+> ⛔ **Security — must read.** In built-in registrar mode there is **no authentication** (empty
+> password). An open `:5062` on the internet is a toll-fraud risk: anyone can register as "100" and
+> intercept calls, or make the gateway send/dial over GSM (real money). **The recommended option is
+> not to expose SIP at all, but to run a VPN (WireGuard)** between the gateway's location and your
+> phone: no forwarding, STUN can stay off, `5062`/RTP listen only on the VPN interface. Alternative
+> — an IP allow-list on the router.
+
+Step-by-step, with log checks — [`docs/internet-security.md`](docs/internet-security.md) (Russian).
+
+---
+
+## Building from source
 
 ```bash
 cd gsm2sip
-./build.sh release        # → gateway-magisk.zip (APK + права + tinymix)
+./build.sh release        # → gateway-magisk.zip (APK + perms + tinymix)
 ```
-Нужны JDK 17 и Android SDK. На Windows есть грабли (32-битная JVM в `JAVA_HOME`, обратные
-слэши в `local.properties`, падающий `lintVital`, конвертация путей в MSYS) — все описаны в
-[`docs/build.md`](docs/build.md).
+JDK 17 and the Android SDK are required. On Windows there are gotchas (a 32-bit JVM in `JAVA_HOME`,
+backslashes in `local.properties`, a failing `lintVital`, MSYS path conversion) — all in
+[`docs/build.md`](docs/build.md) (Russian).
 
 ---
 
-## Честный статус и риски
+## Honest status and risks
 
-- Звук на `serrano3g` в режиме «в себе» — **подтверждён** (22.10.2026, двусторонний). Нужен
-  перетест на стабильность под нагрузкой (планируется).
-- Исходящие/входящие SMS и ответы — подтверждены на baresip (см. выше).
-- **Интернет-часть (белый IP, пробросы, STUN) ещё не проверена вживую** — только LAN. Это
-  следующий шаг при переезде телефона на локацию с белым IP.
-- **Отладочная сборка:** в текущем коде включены подробные SIP-логи (`SipWire`) и поднят до
-  1 часа таймаут тишины RTP (`RTP_TIMEOUT_MS` в `RtpSession.kt`). Перед «тиражом» вернуть
-  (лог убрать, таймаут → 30 с).
-- **Главный риск продакшена** — открытый `5062` без аутентификации. SIP-аутентификация
-  регистратора — осознанный TODO; до неё только VPN или allow-list.
+- Audio on `serrano3g` in "device-in-itself" mode is **confirmed** (2026-10-22, two-way). Needs a
+  proper stability retest under load (planned).
+- Outgoing/incoming SMS and replies — confirmed with baresip (above).
+- **The internet path (public IP, forwarding, STUN) is not yet tested live** — LAN only. That's the
+  next step when the phone moves to a location with a public IP.
+- **Debug build:** verbose SIP logs (`SipWire`) are on and the RTP silence timeout is raised to 1
+  hour (`RTP_TIMEOUT_MS` in `RtpSession.kt`). Revert before a "release" (drop the log, timeout → 30 s).
+- **The main production risk** is an open `:5062` with no auth. Registrar SIP authentication is a
+  deliberate TODO; until then, only VPN or an IP allow-list.
 
-### Точка отката
+### Rollback point
 
-git-тег **`v1.3.9-serrano3g-twoway`** (коммит `e33f615`): `git checkout v1.3.9-serrano3g-twoway`.
-Текущий релиз — **1.3.11** (versionCode 438): двусторонние SMS в режиме регистратора.
+git tag **`v1.3.9-serrano3g-twoway`** (commit `e33f615`): `git checkout v1.3.9-serrano3g-twoway`.
+Current release — **1.3.11** (versionCode 438): two-way SMS in registrar mode.
 
 ---
 
-## Лицензия и благодарности
+## License and credits
 
-Форк [**pulpoff/gsm2sip**](https://github.com/pulpoff/gsm2sip). Лицензия — **MIT** (см.
-[`LICENSE`](LICENSE), © 2026 pulpoff). Наши изменения распространяются на тех же условиях MIT.
-Оригинальный README сохранён как [`README.upstream.md`](README.upstream.md).
+A fork of [**pulpoff/gsm2sip**](https://github.com/pulpoff/gsm2sip). License — **MIT** (see
+[`LICENSE`](LICENSE), © 2026 pulpoff). Our changes are distributed under the same MIT terms. The
+original README is preserved as [`README.upstream.md`](README.upstream.md).
 
-**Credits.** Код писал Claude (Anthropic) по задачам владельца; владелец ставил задачи и
-тестировал каждую сборку на живом устройстве.
+Thanks to the gsm2sip author for the GSM↔SIP bridge, the Magisk module, and ALSA mixer control on
+Qualcomm — without it track B would be impossible.
 
-Спасибо автору gsm2sip за мост GSM↔SIP, Magisk-модуль и управление ALSA-микшером на Qualcomm —
-без этого трек B был бы невозможен.
+**Credits.** The code was written by Claude (Anthropic) to the owner's tasks; the owner set the
+tasks and tested every build on a live device.
