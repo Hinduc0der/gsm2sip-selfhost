@@ -10,7 +10,7 @@
     <EditText
         android:id="@+id/etSimNumber"
         style="@style/CfgField"
-        android:hint="international, e.g. +4915112345678"
+        android:hint="@string/cfg_hint_own_number"
         android:inputType="phone" />
 
     <TextView

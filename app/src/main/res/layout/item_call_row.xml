@@ -16,7 +16,7 @@
         android:padding="9dp"
         android:background="@drawable/input_bg"
         android:src="@drawable/ic_call_incoming"
-        android:contentDescription="direction" />
+        android:contentDescription="@string/desc_call_direction" />
 
     <LinearLayout
         android:layout_width="0dp"

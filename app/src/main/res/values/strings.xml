@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ── Служебные (не UI) ── -->
     <string name="app_name">gsm2sip</string>
     <string name="activity_title">gsm2sip</string>
     <string name="channel_name">gsm2sip Service</string>
@@ -10,4 +11,149 @@
     <string name="notification_text_registered">Registered — Ready</string>
     <string name="notification_text_unregistered">Connecting…</string>
     <string name="notification_text_call">Call active</string>
+
+    <!-- ── Переключатель языка и шапка главного экрана ── -->
+    <string name="home_gateway_title">GSM2SIP</string>
+    <string name="lang_ru">РУ</string>
+    <string name="lang_en">EN</string>
+    <string name="status_offline">● Offline</string>
+    <string name="status_online">● Online</string>
+    <string name="desc_tls_badge">SIP signalling encrypted with TLS</string>
+    <string name="desc_srtp_badge">Call audio encrypted with SRTP</string>
+    <string name="desc_menu">Menu</string>
+
+    <!-- ── Фильтры списка звонков ── -->
+    <string name="filter_all">All</string>
+    <string name="filter_incoming">Incoming</string>
+    <string name="filter_outgoing">Outgoing</string>
+
+    <!-- ── Карточка активного звонка ── -->
+    <string name="active_call">● ACTIVE CALL</string>
+    <string name="dir_gsm_sip">GSM → SIP</string>
+    <string name="dir_sip_gsm">SIP → GSM</string>
+    <string name="btn_mute">Mute</string>
+    <string name="btn_unmute">Unmute</string>
+    <string name="btn_snoop">Snoop</string>
+    <string name="btn_snoop_stop">Stop</string>
+    <string name="btn_end">End</string>
+
+    <!-- ── Недавние звонки ── -->
+    <string name="recent_calls">RECENT CALLS</string>
+    <string name="traffic_today">Today</string>
+    <string name="traffic_empty">No calls yet</string>
+    <string name="traffic_earlier">Earlier</string>
+    <string name="traffic_not_connected">Not connected</string>
+    <string name="traffic_no_text">(no text)</string>
+    <string name="badge_sms">SMS</string>
+    <string name="desc_call_direction">direction</string>
+
+    <!-- ── Экран настроек ── -->
+    <string name="desc_back">Back</string>
+    <string name="settings_title">Settings</string>
+    <string name="desc_logs">Logs</string>
+    <string name="desc_app_logo">gsm2sip</string>
+    <string name="app_logo_label">gsm2sip</string>
+    <string name="cfg_sip_server">SIP Server</string>
+    <string name="cfg_sip_port">SIP Port</string>
+    <string name="cfg_sip_username">SIP Username</string>
+    <string name="cfg_sip_password">SIP Password</string>
+    <string name="cfg_hint_username">extension</string>
+    <string name="cfg_hint_password">password</string>
+    <string name="cfg_own_number">Own Number (SIM)</string>
+    <string name="cfg_hint_own_number">international, e.g. +4915112345678</string>
+    <string name="cfg_own_number_hint_text">Sent as the SIP destination so the server can map the call to an assistant. Without it the gateway addresses its own extension and the call loops back.</string>
+    <string name="cfg_audio_codec">Audio Codec</string>
+    <string name="cfg_codec_g722">G.722 only — wideband 16 kHz (recommended)</string>
+    <string name="cfg_codec_both">G.722 preferred, G.711 allowed</string>
+    <string name="cfg_codec_g711">G.711 only — narrowband 8 kHz</string>
+    <string name="cfg_codec_hint">Offering G.711 alongside G.722 usually means the server picks G.711 and every call is narrowband, which is why G.722 alone is the default.</string>
+    <string name="cfg_agent_volume">Agent Volume</string>
+    <string name="cfg_agent_volume_hint">How loud the agent is to the GSM caller. 0 is what the detected device asks for; each step roughly a third louder or quieter. Raise it if callers say the agent is faint, lower it if the line distorts.</string>
+    <string name="cfg_battery_protection">Battery charge protection</string>
+    <string name="cfg_battery_keep">Keep the battery between these limits</string>
+    <string name="cfg_battery_start">Start charging below</string>
+    <string name="cfg_battery_stop" formatted="false">"%     Stop at"</string>
+    <string name="cfg_percent" formatted="false">%</string>
+    <string name="cfg_battery_status_disabled">Disabled</string>
+    <string name="cfg_battery_hint" formatted="false">Requires the gsm2sip Magisk module. The default 35%–65% range reduces battery wear while the phone stays connected to USB.</string>
+    <string name="cfg_autoconnect">Autoconnect on startup</string>
+    <string name="cfg_use_stun">Use STUN</string>
+    <string name="cfg_stun_hint">Finds the public IP so SIP and RTP survive NAT. Turn off for a SIP server on the local network.</string>
+    <string name="cfg_enable_tls">Enable TLS</string>
+    <string name="cfg_tls_hint">Encrypts SIP signalling — registration, calls and SMS text. Call audio (RTP) is not encrypted either way. The server must offer TLS, usually on port 5061.</string>
+    <string name="cfg_encrypt_audio_srtp">Encrypt audio (SRTP)</string>
+    <string name="cfg_srtp_hint">SDES-keyed SRTP (RFC 3711). Requires TLS: the keys travel inside the SIP signalling, so over plain UDP they would be readable by anyone on the path.</string>
+    <string name="cfg_srtp_hint_on">SDES-keyed SRTP (RFC 3711). Audio is encrypted when the server agrees; if it answers without SRTP the call continues unencrypted and the log says so.</string>
+    <string name="cfg_srtp_hint_off">Requires TLS. The keys travel inside the SIP signalling, so over plain UDP they would be readable by anyone on the path.</string>
+    <string name="cfg_ascii_sms">ASCII-only outgoing SMS</string>
+    <string name="cfg_ascii_hint">Rewrites accents before sending: für becomes fuer. Turn on if umlauts arrive mangled. Cyrillic, Hebrew, Arabic and other non-Latin text is never rewritten — it is sent as-is.</string>
+    <string name="cfg_clear_recents">CLEAR RECENTS</string>
+    <string name="cfg_save">SAVE</string>
+
+    <!-- ── Экран журнала ── -->
+    <string name="logs_title">Logs</string>
+    <string name="desc_copy_log">Copy log</string>
+    <string name="desc_clear_log">Clear log</string>
+
+    <!-- ── Полноэкранный экран звонка ── -->
+    <string name="incall_calling">Calling…</string>
+    <string name="incall_ringing">Ringing…</string>
+    <string name="incall_connecting">Connecting…</string>
+    <string name="incall_connected">Connected</string>
+    <string name="incall_ending">Ending…</string>
+    <string name="incall_ended">Call ended</string>
+    <string name="incall_listen">LISTEN IN</string>
+    <string name="incall_stop_listen">STOP LISTENING</string>
+    <string name="incall_end_call">END CALL</string>
+
+    <!-- ── Всплывающие сообщения и диалоги (из кода) ── -->
+    <string name="toast_registered">Registered</string>
+    <string name="toast_reconnecting">Reconnecting…</string>
+    <string name="toast_port_5061">Port switched to 5061 for TLS</string>
+    <string name="toast_port_5060">Port switched back to 5060</string>
+    <string name="toast_nothing_to_clear">Nothing to clear</string>
+    <string name="dlg_clear_recents_title">Clear recents?</string>
+    <string name="dlg_clear_recents_msg">Removes all %1$d calls and messages from the list. This cannot be undone.</string>
+    <string name="btn_clear">Clear</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="toast_recents_cleared">Recents cleared</string>
+    <string name="toast_server_user_required">Server and username are required</string>
+    <string name="toast_battery_limits" formatted="false">Battery limits must be 5–90%, 10–100%, with at least 5% between them</string>
+    <string name="toast_saved_reconnecting">Saved — reconnecting</string>
+    <string name="cfg_battery_checking">Checking charger status…</string>
+    <string name="bat_root_unavailable">Root charger control is unavailable</string>
+    <string name="bat_usb_disconnected">Protection enabled · USB not connected · %1$d%%</string>
+    <string name="bat_charging_stopped">Protection enabled · charging stopped at %1$d%%</string>
+    <string name="bat_charging_allowed">Protection enabled · charging allowed at %1$d%%</string>
+    <string name="home_connected">Connected</string>
+    <string name="home_connected_to">Connected to %1$s</string>
+    <string name="sim_no_active">No active SIM detected</string>
+    <string name="toast_log_cleared">Log cleared</string>
+    <string name="toast_log_empty">Log is empty</string>
+    <string name="toast_log_copied">Log copied to clipboard</string>
+    <string name="toast_copied">Copied</string>
+    <string name="toast_cant_open_link">Can\'t open link</string>
+    <string name="dlg_close">Close</string>
+    <string name="dlg_copy">Copy</string>
+    <string name="dlg_message_detail">Message detail</string>
+    <string name="dlg_mobile_network">Mobile network</string>
+    <string name="dlg_wifi">WiFi</string>
+
+    <!-- ── Диагностические метки dialog_info.xml (резервный лейаут) ── -->
+    <string name="info_gsm">GSM</string>
+    <string name="info_network">Network</string>
+    <string name="info_type">Type</string>
+    <string name="info_signal">Signal</string>
+    <string name="info_cell_id">Cell ID</string>
+    <string name="info_imei">IMEI</string>
+    <string name="info_phone">Phone</string>
+    <string name="info_band">Band</string>
+    <string name="info_local_ip">Local IP</string>
+    <string name="info_internet">Internet</string>
+    <string name="info_public_ip">Public IP</string>
+    <string name="info_detecting">detecting…</string>
+    <string name="info_check_support">Check Gateway Support</string>
+
+    <!-- ── Ссылка доната ── -->
+    <string name="donate_footer">♡ Support development (optional)</string>
 </resources>

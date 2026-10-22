@@ -1,10 +1,22 @@
-# gsm2sip-selfhost — a "device-in-itself" phone gateway for old rooted Qualcomm phones
+# gsm2sip-selfhost - a "device-in-itself" phone gateway for old rooted Qualcomm phones
 
 > 🇷🇺 **[Русская версия →](README.ru.md)** (fuller, with the project's own notes) ·
 > 🇬🇧 English (this file). Original project README: [`README.upstream.md`](README.upstream.md).
 
+> 👉 **New here?** A plain-language, from-scratch step-by-step guide (flash, module, softphone,
+> port forwarding) is in [`docs/КАК-НАСТРОИТЬ.md`](docs/КАК-НАСТРОИТЬ.md) (Russian).
+
+## Documentation map
+
+- **For users:** [`docs/КАК-НАСТРОИТЬ.md`](docs/КАК-НАСТРОИТЬ.md) - the single page that's enough
+  to set everything up from scratch (Russian).
+- **Reference:** [gateway app settings](#gateway-app-settings) ·
+  [baresip client](docs/client-baresip.md) · [internet and security](docs/internet-security.md)
+  (VPN as a fallback - [`docs/vpn-wireguard.md`](docs/vpn-wireguard.md)).
+- **For developers:** [building from source](docs/build.md).
+
 A cheap old Android phone with your SIM sits at home on a charger and Wi-Fi. The incoming
-**voice calls and SMS** that arrive on its number are relayed to your phone over the internet —
+**voice calls and SMS** that arrive on its number are relayed to your phone over the internet -
 wherever you are. **No PC, no Asterisk, no external server:** the SIP server is built into the
 app on the gateway phone itself.
 
@@ -27,7 +39,7 @@ given phone is decided by the [triage script](#hardware-requirements).
 ## Who it's for
 
 Your home number (SIM) anchors your bank, government services, 2FA codes, and calls from family
-and services — carrying it around is both inconvenient and risky. This gateway keeps the SIM
+and services - carrying it around is both inconvenient and risky. This gateway keeps the SIM
 **at home** and delivers its calls and SMS to you over the internet, on any phone, wherever you
 are.
 
@@ -38,11 +50,11 @@ are.
   "alive" and tied to your accounts while you are in another country: bank calls and SMS codes
   arrive as before.
 - **Safety on the street.** If your phone is stolen or snatched in an unfamiliar city, the home
-  SIM **isn't in it** — it's at home. The thief gets no access to your number, can't intercept
+  SIM **isn't in it** - it's at home. The thief gets no access to your number, can't intercept
   SMS codes, can't reset passwords by SMS, and can't reach SIM-bound accounts or your bank. The
   stolen phone holds only a local data eSIM or an "empty" second SIM with no important bindings.
 - **Privacy and control.** A "device-in-itself": the SIP server lives inside the gateway phone,
-  audio and messages go straight to your softphone — no clouds, no third-party servers, nothing
+  audio and messages go straight to your softphone - no clouds, no third-party servers, nothing
   leaves to anyone else.
 
 **For:** travelers and digital nomads, expats, rotational workers, students abroad; anyone who
@@ -67,14 +79,14 @@ LineageOS 16 (Android 9), in built-in registrar mode:
 Not done yet: outgoing **calls** from the far phone over the gateway's SIM; wideband audio
 (currently G.711, narrowband); SIP authentication for the registrar
 (see [security](#going-to-the-internet-and-security)). The internet path (public IP, forwarding,
-STUN) is written but **not yet tested live** — LAN only.
+STUN) is written but **not yet tested live** - LAN only.
 
 ---
 
 ## How this fork differs from upstream
 
 Stock [gsm2sip](https://github.com/pulpoff/gsm2sip) registers to an **external** SIP server
-(Asterisk, etc.). This fork adds a **built-in registrar** mode — the idea carried over from
+(Asterisk, etc.). This fork adds a **built-in registrar** mode - the idea carried over from
 track A:
 
 - the app accepts `REGISTER` on `:5062` itself, remembers the softphone's address, and routes
@@ -97,13 +109,13 @@ There is no external server. All SIP runs on the gateway phone itself.
 - The softphone registers **straight to the gateway phone** (its IP, port `5062/UDP`).
 - An incoming GSM call → gsm2sip answers it, sends `INVITE` to the **first registered** softphone,
   and brings up a peer-to-peer RTP bridge. No Asterisk/PC in the path.
-- To work "while traveling" the gateway phone must be reachable from the internet — a public IP
+- To work "while traveling" the gateway phone must be reachable from the internet - a public IP
   with port forwarding, or a VPN (see [below](#going-to-the-internet-and-security)).
 
 ### Where things live
 
 "All the logic is in the APK" (`com.callagent.gateway`): registrar, bridge, RTP. **But** the app
-needs system permissions and the audio restrictions lifted — that is what the **Magisk module**
+needs system permissions and the audio restrictions lifted - that is what the **Magisk module**
 does. So the "server part" = APK + Magisk module, shipped together in one `gateway-magisk.zip`.
 
 | Component | Where | What it does |
@@ -125,7 +137,7 @@ does. So the "server part" = APK + Magisk module, shipped together in one `gatew
 
 ## Hardware requirements
 
-- **Qualcomm**, NOT Exynos (no suitable call-audio path on Exynos — verified by the gsm2sip author on an S10e).
+- **Qualcomm**, NOT Exynos (no suitable call-audio path on Exynos - verified by the gsm2sip author on an S10e).
 - **LineageOS + Magisk** (stock usually lacks the needed audio path; on the S4 mini `incall_music`
   appears specifically on LineageOS).
 - A voice SIM, stable Wi-Fi, permanent charging.
@@ -139,7 +151,7 @@ Confirmed with a live call:
 | Samsung S4 mini GT-I9195 | `serranolte` | MSM8960 | LineageOS 16 (gsm2sip author) |
 | **Samsung S4 mini GT-I9190** | `serrano3g` | MSM8930/WCD9304 | **our unit, two-way audio 2026-10-22** |
 
-**Triage script** (quick elimination without installing) — `triage/check-phone.sh` in the larger
+**Triage script** (quick elimination without installing) - `triage/check-phone.sh` in the larger
 project: connect the phone over USB (debugging on), run `bash check-phone.sh` → "CANDIDATE/NOPE" +
 root signals + the recommended track (A/B).
 
@@ -166,7 +178,7 @@ No GApps needed. Steps (modes via adb, Odin is a GUI):
    reboot, do first-time setup.
 5. **Root:** install `Magisk-v30.7.apk`, grant root.
 
-Hardware checkpoint (before anything else): `tools/check-device.sh` (needs root) — inspects the
+Hardware checkpoint (before anything else): `tools/check-device.sh` (needs root) - inspects the
 HAL mixers and the capture path. No path → track B is closed on this phone by hardware.
 
 ---
@@ -177,7 +189,7 @@ The phone is already flashed with LineageOS 16 + Magisk; you only install our so
 no external server.
 
 1. **Build the module** (on a PC): in the repo root, `./build.sh release` (JDK 17, Android SDK) →
-   produces `gateway-magisk.zip` — the APK, permissions and tinymix together. More, plus build
+   produces `gateway-magisk.zip` - the APK, permissions and tinymix together. More, plus build
    gotchas, in [`docs/build.md`](docs/build.md) (Russian).
    > ABI: `tinymix` is built for both architectures; `install.sh` places the right one by
    > `ro.product.cpu.abi`. The S4 mini is 32-bit (`armeabi-v7a`).
@@ -187,7 +199,7 @@ no external server.
 3. **Default phone app:** Settings → Apps → Default apps → Phone → **gsm2sip**. Without this the
    app won't answer GSM calls by itself.
 4. **Check permissions** (optional, adb+root):
-   `dumpsys package com.callagent.gateway | grep -E "CAPTURE_AUDIO_OUTPUT|RECORD_AUDIO"` — should be
+   `dumpsys package com.callagent.gateway | grep -E "CAPTURE_AUDIO_OUTPUT|RECORD_AUDIO"` - should be
    `granted=true`. The Magisk log tag `GatewayMagisk` traces the whole run.
 5. **Open the app, configure it** (below). In "device-in-itself" mode no SIP server/login/password
    is needed.
@@ -210,50 +222,57 @@ Opened via the gear at top right. For "device-in-itself" mode:
 | Codec | G.711 (PCMA/PCMU) is safer on a narrow link; G.722 is wider | the call log showed `pt=8` (PCMA) |
 | **STUN (`use_stun`)** | **off for LAN, on for internet** | off → advertises `localIp`; on → public IP (see [internet](#going-to-the-internet-and-security)) |
 
-The registrar port **5062** is hardcoded (`localPort`). RTP range — UDP **30000–40000** (even),
+The registrar port **5062** is hardcoded (`localPort`). RTP range - UDP **30000–40000** (even),
 `RTP_PORT_MIN/MAX` in `CallOrchestrator.kt`.
 
 ---
 
-## Recommended client — baresip
+## Recommended client - baresip
 
 The far phone needs a SIP softphone. We recommend
 **[baresip](https://f-droid.org/packages/com.tutpro.baresip/)** (`com.tutpro.baresip`, F-Droid):
 a free libre client that **always** sends page-mode `MESSAGE` (RFC 3428) and holds several
-accounts. **Linphone 6.2.x did not work out** — its new UI won't send a plain page-mode MESSAGE to
+accounts. **Linphone 6.2.x did not work out** - its new UI won't send a plain page-mode MESSAGE to
 an arbitrary number (built around Flexisip/encrypted chat), so outgoing SMS never left it.
 
 Quick account setup: ⋮ → "Accounts" → the "SIP URI or New account" field →
 `sip:100@<gateway-IP>:5062` → "+" → enable the **"Register"** toggle (interval 900).
 No password/proxy/username needed.
 
-> ⚠ **The `:5062` port is mandatory right in the AoR** — otherwise both REGISTER and MESSAGE go to
+> ⚠ **The `:5062` port is mandatory right in the AoR** - otherwise both REGISTER and MESSAGE go to
 > `:5060`, where nothing is listening.
 
-Full client guide (two SIMs, SMS replies, alternatives, gotchas) —
+Full client guide (two SIMs, SMS replies, alternatives, gotchas) -
 [`docs/client-baresip.md`](docs/client-baresip.md) (Russian).
 
 ---
 
 ## Going to the internet, and security
 
-The gateway phone is behind a router with a **public (non-CGNAT) IP**; the softphone is anywhere.
-In short:
+To reach the gateway "from the road" it must be reachable from the internet. **The main path is
+direct access:** the gateway phone behind a router with a **public (non-CGNAT) IP**, the softphone
+anywhere. In short:
 
-1. **DHCP reservation** for the gateway's LAN address by MAC — so it doesn't change.
+1. **DHCP reservation** for the gateway's LAN address by MAC - so it doesn't change.
 2. **UDP forwarding** on the router: `5062` (SIP) and `30000–40000` (RTP) to the gateway's LAN
-   address. RTP must be **1:1, same port numbers** (no translation, or audio goes to the wrong place).
+   address. RTP must be **1:1, same port numbers** (no translation, or audio goes to the wrong
+   place). The registrar port `5062` is hardcoded.
 3. **Enable STUN** in the app → the gateway puts its public IP in Via/Contact/SDP.
 4. Point the client at `<public IP or domain>:5062`.
 
-> ⛔ **Security — must read.** In built-in registrar mode there is **no authentication** (empty
-> password). An open `:5062` on the internet is a toll-fraud risk: anyone can register as "100" and
-> intercept calls, or make the gateway send/dial over GSM (real money). **The recommended option is
-> not to expose SIP at all, but to run a VPN (WireGuard)** between the gateway's location and your
-> phone: no forwarding, STUN can stay off, `5062`/RTP listen only on the VPN interface. Alternative
-> — an IP allow-list on the router.
+**The fallback is a VPN** (WireGuard) if there is no public IP or you don't want to expose SIP; the
+gateway phone can be its own VPN server. On track B the VPN still has a reply-path bug (registration
+doesn't go green yet) - see [`docs/vpn-wireguard.md`](docs/vpn-wireguard.md).
 
-Step-by-step, with log checks — [`docs/internet-security.md`](docs/internet-security.md) (Russian).
+> ⛔ **Security - must read.** In built-in registrar mode there is **no authentication yet** (empty
+> password). An open `:5062` on the internet is a toll-fraud risk: anyone can register as "100" and
+> intercept calls, or make the gateway send/dial over GSM (real money). A password on
+> REGISTER/INVITE and automatic source banning (like Asterisk + fail2ban) are **planned but not
+> implemented yet**; until then an **IP allow-list** on the router (or a VPN) is required. A
+> non-standard port is camouflage, not protection.
+
+Full step-by-step (direct access, security, VPN as a fallback) -
+[`docs/internet-security.md`](docs/internet-security.md) (Russian).
 
 ---
 
@@ -264,7 +283,7 @@ cd gsm2sip
 ./build.sh release        # → gateway-magisk.zip (APK + perms + tinymix)
 ```
 JDK 17 and the Android SDK are required. On Windows there are gotchas (a 32-bit JVM in `JAVA_HOME`,
-backslashes in `local.properties`, a failing `lintVital`, MSYS path conversion) — all in
+backslashes in `local.properties`, a failing `lintVital`, MSYS path conversion) - all in
 [`docs/build.md`](docs/build.md) (Russian).
 
 ---
@@ -273,8 +292,8 @@ backslashes in `local.properties`, a failing `lintVital`, MSYS path conversion) 
 
 - Audio on `serrano3g` in "device-in-itself" mode is **confirmed** (2026-10-22, two-way). Needs a
   proper stability retest under load (planned).
-- Outgoing/incoming SMS and replies — confirmed with baresip (above).
-- **The internet path (public IP, forwarding, STUN) is not yet tested live** — LAN only. That's the
+- Outgoing/incoming SMS and replies - confirmed with baresip (above).
+- **The internet path (public IP, forwarding, STUN) is not yet tested live** - LAN only. That's the
   next step when the phone moves to a location with a public IP.
 - **Debug build:** verbose SIP logs (`SipWire`) are on and the RTP silence timeout is raised to 1
   hour (`RTP_TIMEOUT_MS` in `RtpSession.kt`). Revert before a "release" (drop the log, timeout → 30 s).
@@ -284,18 +303,30 @@ backslashes in `local.properties`, a failing `lintVital`, MSYS path conversion) 
 ### Rollback point
 
 git tag **`v1.3.9-serrano3g-twoway`** (commit `e33f615`): `git checkout v1.3.9-serrano3g-twoway`.
-Current release — **1.3.11** (versionCode 438): two-way SMS in registrar mode.
+Current release - **1.3.11** (versionCode 438): two-way SMS in registrar mode.
+
+---
+
+## Support the project (donate)
+
+Non-commercial, distributed directly (APK), not via app stores. If it's useful to you, you can
+**voluntarily** support development:
+
+- **DonationAlerts:** [donationalerts.com/r/hinducoder](https://www.donationalerts.com/r/hinducoder)
+
+> The donation is **entirely voluntary** and changes nothing: all features work without paying and
+> the source is open (MIT). Not a purchase or subscription.
 
 ---
 
 ## License and credits
 
-A fork of [**pulpoff/gsm2sip**](https://github.com/pulpoff/gsm2sip). License — **MIT** (see
+A fork of [**pulpoff/gsm2sip**](https://github.com/pulpoff/gsm2sip). License - **MIT** (see
 [`LICENSE`](LICENSE), © 2026 pulpoff). Our changes are distributed under the same MIT terms. The
 original README is preserved as [`README.upstream.md`](README.upstream.md).
 
 Thanks to the gsm2sip author for the GSM↔SIP bridge, the Magisk module, and ALSA mixer control on
-Qualcomm — without it track B would be impossible.
+Qualcomm - without it track B would be impossible.
 
 **Credits.** The code was written by Claude (Anthropic) to the owner's tasks; the owner set the
 tasks and tested every build on a live device.

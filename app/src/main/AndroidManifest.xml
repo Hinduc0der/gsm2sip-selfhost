@@ -152,5 +152,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- Хранение выбранного языка интерфейса на Android < 13.
+             AppCompat сам пишет и читает локаль через этот сервис, когда
+             autoStoreLocales=true; на Android 13+ язык хранит система. -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
     </application>
 </manifest>

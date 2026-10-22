@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── Служебные (не UI) ── -->
+    <string name="app_name">gsm2sip</string>
+    <string name="activity_title">gsm2sip</string>
+    <string name="channel_name">Служба gsm2sip</string>
+    <string name="channel_description">Поддерживает SIP-регистрацию активной</string>
+    <string name="channel_name_quiet">Служба gsm2sip (тихо)</string>
+    <string name="channel_description_quiet">Поддерживает SIP-регистрацию без значка в статусбаре</string>
+    <string name="notification_title">gsm2sip</string>
+    <string name="notification_text_registered">Зарегистрирован — готов</string>
+    <string name="notification_text_unregistered">Подключение…</string>
+    <string name="notification_text_call">Идёт звонок</string>
+
+    <!-- ── Переключатель языка и шапка главного экрана ── -->
+    <string name="home_gateway_title">GSM2SIP</string>
+    <string name="lang_ru">РУ</string>
+    <string name="lang_en">EN</string>
+    <string name="status_offline">● Не в сети</string>
+    <string name="status_online">● В сети</string>
+    <string name="desc_tls_badge">Сигнализация SIP шифруется TLS</string>
+    <string name="desc_srtp_badge">Аудио звонка шифруется SRTP</string>
+    <string name="desc_menu">Меню</string>
+
+    <!-- ── Фильтры списка звонков ── -->
+    <string name="filter_all">Все</string>
+    <string name="filter_incoming">Входящие</string>
+    <string name="filter_outgoing">Исходящие</string>
+
+    <!-- ── Карточка активного звонка ── -->
+    <string name="active_call">● АКТИВНЫЙ ЗВОНОК</string>
+    <string name="dir_gsm_sip">GSM → SIP</string>
+    <string name="dir_sip_gsm">SIP → GSM</string>
+    <string name="btn_mute">Заглушить</string>
+    <string name="btn_unmute">Вернуть звук</string>
+    <string name="btn_snoop">Слушать</string>
+    <string name="btn_snoop_stop">Стоп</string>
+    <string name="btn_end">Отбой</string>
+
+    <!-- ── Недавние звонки ── -->
+    <string name="recent_calls">НЕДАВНИЕ ЗВОНКИ</string>
+    <string name="traffic_today">Сегодня</string>
+    <string name="traffic_empty">Пока нет звонков</string>
+    <string name="traffic_earlier">Ранее</string>
+    <string name="traffic_not_connected">Не соединён</string>
+    <string name="traffic_no_text">(нет текста)</string>
+    <string name="badge_sms">SMS</string>
+    <string name="desc_call_direction">направление</string>
+
+    <!-- ── Экран настроек ── -->
+    <string name="desc_back">Назад</string>
+    <string name="settings_title">Настройки</string>
+    <string name="desc_logs">Журнал</string>
+    <string name="desc_app_logo">gsm2sip</string>
+    <string name="app_logo_label">gsm2sip</string>
+    <string name="cfg_sip_server">SIP-сервер</string>
+    <string name="cfg_sip_port">SIP-порт</string>
+    <string name="cfg_sip_username">Имя пользователя SIP</string>
+    <string name="cfg_sip_password">Пароль SIP</string>
+    <string name="cfg_hint_username">внутренний номер</string>
+    <string name="cfg_hint_password">пароль</string>
+    <string name="cfg_own_number">Свой номер (SIM)</string>
+    <string name="cfg_hint_own_number">в межд. формате, напр. +4915112345678</string>
+    <string name="cfg_own_number_hint_text">Отправляется как SIP-назначение, чтобы сервер сопоставил звонок с ассистентом. Без него шлюз адресует звонок своему же внутреннему номеру, и звонок зацикливается.</string>
+    <string name="cfg_audio_codec">Аудиокодек</string>
+    <string name="cfg_codec_g722">Только G.722 — широкополосный 16 кГц (рекомендуется)</string>
+    <string name="cfg_codec_both">G.722 предпочтительно, G.711 допустим</string>
+    <string name="cfg_codec_g711">Только G.711 — узкополосный 8 кГц</string>
+    <string name="cfg_codec_hint">Если предлагать G.711 вместе с G.722, сервер обычно выбирает G.711 и все звонки узкополосные — поэтому по умолчанию только G.722.</string>
+    <string name="cfg_agent_volume">Громкость ассистента</string>
+    <string name="cfg_agent_volume_hint">Насколько громко ассистента слышит звонящий по GSM. 0 — как просит распознанное устройство; каждый шаг примерно на треть громче или тише. Повышайте, если ассистента еле слышно, понижайте, если линию искажает.</string>
+    <string name="cfg_battery_protection">Защита заряда батареи</string>
+    <string name="cfg_battery_keep">Держать заряд в этих пределах</string>
+    <string name="cfg_battery_start">Начинать заряд ниже</string>
+    <string name="cfg_battery_stop" formatted="false">"%   Остановить на"</string>
+    <string name="cfg_percent" formatted="false">%</string>
+    <string name="cfg_battery_status_disabled">Отключено</string>
+    <string name="cfg_battery_hint" formatted="false">Требует модуль Magisk gsm2sip. Диапазон по умолчанию 35%–65% снижает износ батареи, пока телефон подключён по USB.</string>
+    <string name="cfg_autoconnect">Автоподключение при запуске</string>
+    <string name="cfg_use_stun">Использовать STUN</string>
+    <string name="cfg_stun_hint">Определяет публичный IP, чтобы SIP и RTP работали через NAT. Отключите для SIP-сервера в локальной сети.</string>
+    <string name="cfg_enable_tls">Включить TLS</string>
+    <string name="cfg_tls_hint">Шифрует сигнализацию SIP — регистрацию, звонки и текст SMS. Аудио звонка (RTP) в любом случае не шифруется. Сервер должен поддерживать TLS, обычно на порту 5061.</string>
+    <string name="cfg_encrypt_audio_srtp">Шифровать аудио (SRTP)</string>
+    <string name="cfg_srtp_hint">SRTP с ключами SDES (RFC 3711). Требует TLS: ключи передаются внутри сигнализации SIP, поэтому по открытому UDP их прочтёт любой на пути.</string>
+    <string name="cfg_srtp_hint_on">SRTP с ключами SDES (RFC 3711). Аудио шифруется, когда сервер согласен; если он ответит без SRTP, звонок продолжится без шифрования, и об этом будет запись в журнале.</string>
+    <string name="cfg_srtp_hint_off">Требует TLS. Ключи передаются внутри сигнализации SIP, поэтому по открытому UDP их прочтёт любой на пути.</string>
+    <string name="cfg_ascii_sms">Исходящие SMS только в ASCII</string>
+    <string name="cfg_ascii_hint">Заменяет акценты перед отправкой: für становится fuer. Включите, если умляуты приходят искажёнными. Кириллица, иврит, арабский и другой нелатинский текст не переписывается — отправляется как есть.</string>
+    <string name="cfg_clear_recents">ОЧИСТИТЬ НЕДАВНИЕ</string>
+    <string name="cfg_save">СОХРАНИТЬ</string>
+
+    <!-- ── Экран журнала ── -->
+    <string name="logs_title">Журнал</string>
+    <string name="desc_copy_log">Копировать журнал</string>
+    <string name="desc_clear_log">Очистить журнал</string>
+
+    <!-- ── Полноэкранный экран звонка ── -->
+    <string name="incall_calling">Вызов…</string>
+    <string name="incall_ringing">Гудки…</string>
+    <string name="incall_connecting">Соединение…</string>
+    <string name="incall_connected">Соединён</string>
+    <string name="incall_ending">Завершение…</string>
+    <string name="incall_ended">Звонок завершён</string>
+    <string name="incall_listen">ПРОСЛУШАТЬ</string>
+    <string name="incall_stop_listen">ОСТАНОВИТЬ ПРОСЛУШКУ</string>
+    <string name="incall_end_call">ЗАВЕРШИТЬ</string>
+
+    <!-- ── Всплывающие сообщения и диалоги (из кода) ── -->
+    <string name="toast_registered">Зарегистрирован</string>
+    <string name="toast_reconnecting">Переподключение…</string>
+    <string name="toast_port_5061">Порт переключён на 5061 для TLS</string>
+    <string name="toast_port_5060">Порт возвращён на 5060</string>
+    <string name="toast_nothing_to_clear">Нечего очищать</string>
+    <string name="dlg_clear_recents_title">Очистить недавние?</string>
+    <string name="dlg_clear_recents_msg">Удалит все записи из списка: %1$d звонков и сообщений. Отменить нельзя.</string>
+    <string name="btn_clear">Очистить</string>
+    <string name="btn_cancel">Отмена</string>
+    <string name="toast_recents_cleared">Недавние очищены</string>
+    <string name="toast_server_user_required">Нужно указать сервер и имя пользователя</string>
+    <string name="toast_battery_limits" formatted="false">Пределы батареи: 5–90%, 10–100%, с разницей не менее 5%</string>
+    <string name="toast_saved_reconnecting">Сохранено — переподключение</string>
+    <string name="cfg_battery_checking">Проверка состояния зарядки…</string>
+    <string name="bat_root_unavailable">Управление зарядкой через root недоступно</string>
+    <string name="bat_usb_disconnected">Защита включена · USB не подключён · %1$d%%</string>
+    <string name="bat_charging_stopped">Защита включена · заряд остановлен на %1$d%%</string>
+    <string name="bat_charging_allowed">Защита включена · заряд разрешён на %1$d%%</string>
+    <string name="home_connected">Соединён</string>
+    <string name="home_connected_to">Соединён с %1$s</string>
+    <string name="sim_no_active">Активная SIM не обнаружена</string>
+    <string name="toast_log_cleared">Журнал очищен</string>
+    <string name="toast_log_empty">Журнал пуст</string>
+    <string name="toast_log_copied">Журнал скопирован в буфер обмена</string>
+    <string name="toast_copied">Скопировано</string>
+    <string name="toast_cant_open_link">Не удалось открыть ссылку</string>
+    <string name="dlg_close">Закрыть</string>
+    <string name="dlg_copy">Копировать</string>
+    <string name="dlg_message_detail">Сведения о сообщении</string>
+    <string name="dlg_mobile_network">Мобильная сеть</string>
+    <string name="dlg_wifi">Wi-Fi</string>
+
+    <!-- ── Диагностические метки dialog_info.xml (резервный лейаут) ── -->
+    <string name="info_gsm">GSM</string>
+    <string name="info_network">Сеть</string>
+    <string name="info_type">Тип</string>
+    <string name="info_signal">Сигнал</string>
+    <string name="info_cell_id">Cell ID</string>
+    <string name="info_imei">IMEI</string>
+    <string name="info_phone">Телефон</string>
+    <string name="info_band">Диапазон</string>
+    <string name="info_local_ip">Локальный IP</string>
+    <string name="info_internet">Интернет</string>
+    <string name="info_public_ip">Публичный IP</string>
+    <string name="info_detecting">определение…</string>
+    <string name="info_check_support">Проверить поддержку шлюза</string>
+
+    <!-- ── Ссылка доната ── -->
+    <string name="donate_footer">♡ Поддержать разработку (добровольно)</string>
+</resources>

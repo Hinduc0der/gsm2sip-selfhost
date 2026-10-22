@@ -54,8 +54,10 @@ import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
 import com.callagent.gateway.service.CallLogEntry
 import com.callagent.gateway.service.CallLogStore
 import com.callagent.gateway.sms.SmsOutbox
@@ -200,14 +202,14 @@ class MainActivity : AppCompatActivity() {
             if (call != null && state != lastGsmPollState) {
                 lastGsmPollState = state
                 when (state) {
-                    android.telecom.Call.STATE_CONNECTING -> tvInCallStatus.text = "Calling..."
-                    android.telecom.Call.STATE_DIALING -> tvInCallStatus.text = "Ringing..."
-                    android.telecom.Call.STATE_RINGING -> tvInCallStatus.text = "Ringing..."
+                    android.telecom.Call.STATE_CONNECTING -> tvInCallStatus.text = getString(R.string.incall_calling)
+                    android.telecom.Call.STATE_DIALING -> tvInCallStatus.text = getString(R.string.incall_ringing)
+                    android.telecom.Call.STATE_RINGING -> tvInCallStatus.text = getString(R.string.incall_ringing)
                     android.telecom.Call.STATE_ACTIVE -> {
                         if (running) {
-                            tvInCallStatus.text = "Connecting..."
+                            tvInCallStatus.text = getString(R.string.incall_connecting)
                         } else {
-                            tvInCallStatus.text = "Connected"
+                            tvInCallStatus.text = getString(R.string.incall_connected)
                             if (callStartTime == 0L) {
                                 callStartTime = System.currentTimeMillis()
                                 tvInCallTimer.text = "00:00"
@@ -288,15 +290,15 @@ class MainActivity : AppCompatActivity() {
 
                     if (inCallOpen) {
                         when (state) {
-                            "GSM_DIALING" -> tvInCallStatus.text = "Calling..."
-                            "GSM_ANSWERED", "SIP_CALLING" -> tvInCallStatus.text = "Connecting..."
-                            "SIP_RINGING" -> tvInCallStatus.text = "Ringing..."
+                            "GSM_DIALING" -> tvInCallStatus.text = getString(R.string.incall_calling)
+                            "GSM_ANSWERED", "SIP_CALLING" -> tvInCallStatus.text = getString(R.string.incall_connecting)
+                            "SIP_RINGING" -> tvInCallStatus.text = getString(R.string.incall_ringing)
                             "BRIDGED" -> {
-                                tvInCallStatus.text = "Connected"
+                                tvInCallStatus.text = getString(R.string.incall_connected)
                                 tvInCallTimer.visibility = View.VISIBLE
                                 startCallTimer()
                             }
-                            "TEARING_DOWN" -> tvInCallStatus.text = "Ending..."
+                            "TEARING_DOWN" -> tvInCallStatus.text = getString(R.string.incall_ending)
                             "IDLE" -> {
                                 scheduleInCallClose()
                             }
@@ -354,17 +356,19 @@ class MainActivity : AppCompatActivity() {
         tvNetMobile.setOnClickListener { showLinkDetails(mobile = true) }
         tvNetWifi.setOnClickListener { showLinkDetails(mobile = false) }
         findViewById<View>(R.id.btnHomeMenu).setOnClickListener { openConfigView() }
+        setupLanguageButtons()
+        setupDonate()
         // Tapping the status pill retries the connection, the way the old
         // settings screen's reconnect button did.
         tvHomeStatusPill.setOnClickListener {
             if (gatewayOnline) {
                 // Already registered — reconnecting would drop a working
                 // registration and send SIP the server did not need.
-                Toast.makeText(this, "Registered", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_registered), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             appendLog("Reconnect requested")
-            Toast.makeText(this, "Reconnecting…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_reconnecting), Toast.LENGTH_SHORT).show()
             startService(Intent(this, GatewayService::class.java).apply {
                 action = GatewayService.ACTION_RECONNECT
             })
@@ -433,6 +437,59 @@ class MainActivity : AppCompatActivity() {
         GatewayService.start(this, server, port, user, pass)
         running = true
         appendLog("Auto-starting gateway: $user@$server:$port")
+    }
+
+    // ── Переключение языка интерфейса ────────────────────
+
+    /**
+     * Две компактные кнопки РУ/EN в шапке.  Смена языка идёт через штатный
+     * per-app locale API AppCompat: [AppCompatDelegate.setApplicationLocales]
+     * сам пересоздаёт активити и подхватывает нужные ресурсы.  Когда локаль
+     * пустая (не задана), ресурсы разрешаются по языку системы — это и есть
+     * автоопределение, отдельного кода не нужно.
+     */
+    private fun setupLanguageButtons() {
+        val btnRu = findViewById<TextView>(R.id.btnLangRu)
+        val btnEn = findViewById<TextView>(R.id.btnLangEn)
+        btnRu.setOnClickListener { applyLocale("ru") }
+        btnEn.setOnClickListener { applyLocale("en") }
+        highlightLanguageButtons(btnRu, btnEn)
+    }
+
+    /** Применить язык, только если он отличается от текущего — иначе лишнее
+     *  пересоздание активити. */
+    private fun applyLocale(tag: String) {
+        if (currentLanguage() == tag) return
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+    }
+
+    /** Фактический язык, которым сейчас нарисован интерфейс. */
+    private fun currentLanguage(): String =
+        resources.configuration.locales[0].language
+
+    private fun highlightLanguageButtons(btnRu: TextView, btnEn: TextView) {
+        val isRu = currentLanguage() == "ru"
+        val active = ContextCompat.getColor(this, R.color.accent)
+        val inactive = ContextCompat.getColor(this, R.color.text_secondary)
+        btnRu.setTextColor(if (isRu) active else inactive)
+        btnEn.setTextColor(if (isRu) inactive else active)
+    }
+
+    // ── Ссылка доната ────────────────────────────────────
+
+    /** Ненавязчивая добровольная ссылка доната (DonationAlerts) внизу главного экрана. */
+    private fun setupDonate() {
+        findViewById<TextView>(R.id.tvDonate).apply {
+            paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
+            setOnClickListener {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DONATE_DA_URL)))
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity,
+                        getString(R.string.toast_cant_open_link), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     // ── Tab Navigation ───────────────────────────────────
@@ -522,7 +579,7 @@ class MainActivity : AppCompatActivity() {
             val row = layoutInflater.inflate(R.layout.item_sim_number, container, false)
             val et = row.findViewById<EditText>(R.id.etSimNumber)
             et.setText(prefs.getString("own_number", ""))
-            row.findViewById<TextView>(R.id.tvSimCaption).text = "No active SIM detected"
+            row.findViewById<TextView>(R.id.tvSimCaption).text = getString(R.string.sim_no_active)
             container.addView(row)
             ownNumberFields += -1 to et
             return
@@ -581,11 +638,9 @@ class MainActivity : AppCompatActivity() {
         fun syncSrtpEnabled() {
             cbSrtp.isEnabled = cbTls.isChecked
             findViewById<TextView>(R.id.tvCfgSrtpHint).text = if (cbTls.isChecked) {
-                "SDES-keyed SRTP (RFC 3711). Audio is encrypted when the server agrees; " +
-                    "if it answers without SRTP the call continues unencrypted and the log says so."
+                getString(R.string.cfg_srtp_hint_on)
             } else {
-                "Requires TLS. The keys travel inside the SIP signalling, so over plain UDP " +
-                    "they would be readable by anyone on the path."
+                getString(R.string.cfg_srtp_hint_off)
             }
         }
         syncSrtpEnabled()
@@ -602,10 +657,10 @@ class MainActivity : AppCompatActivity() {
             val current = portField.text.toString().trim().toIntOrNull()
             if (checked && current == 5060) {
                 portField.setText("5061")
-                Toast.makeText(this, "Port switched to 5061 for TLS", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_port_5061), Toast.LENGTH_SHORT).show()
             } else if (!checked && current == 5061) {
                 portField.setText("5060")
-                Toast.makeText(this, "Port switched back to 5060", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_port_5060), Toast.LENGTH_SHORT).show()
             }
         }
         findViewById<RadioButton>(
@@ -643,24 +698,24 @@ class MainActivity : AppCompatActivity() {
     private fun confirmClearRecents() {
         val count = try { CallLogStore.getEntries(this).size } catch (_: Exception) { 0 }
         if (count == 0) {
-            Toast.makeText(this, "Nothing to clear", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_nothing_to_clear), Toast.LENGTH_SHORT).show()
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Clear recents?")
-            .setMessage("Removes all $count calls and messages from the list. This cannot be undone.")
-            .setPositiveButton("Clear") { _, _ ->
+            .setTitle(getString(R.string.dlg_clear_recents_title))
+            .setMessage(getString(R.string.dlg_clear_recents_msg, count))
+            .setPositiveButton(getString(R.string.btn_clear)) { _, _ ->
                 // Off the UI thread: clearing rewrites the stored blob, and
                 // the list is rebuilt from disk straight afterwards.
                 Thread {
                     try { CallLogStore.clear(this) } catch (_: Exception) {}
                     runOnUiThread {
                         if (currentTab == "home") refreshHome()
-                        Toast.makeText(this, "Recents cleared", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.toast_recents_cleared), Toast.LENGTH_SHORT).show()
                     }
                 }.start()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
     }
 
@@ -692,7 +747,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (server.isEmpty() || user.isEmpty()) {
-            Toast.makeText(this, "Server and username are required", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.toast_server_user_required), Toast.LENGTH_LONG).show()
             return
         }
         if (batteryProtection &&
@@ -700,7 +755,7 @@ class MainActivity : AppCompatActivity() {
         ) {
             Toast.makeText(
                 this,
-                "Battery limits must be 5–90%, 10–100%, with at least 5% between them",
+                getString(R.string.toast_battery_limits),
                 Toast.LENGTH_LONG
             ).show()
             return
@@ -736,7 +791,7 @@ class MainActivity : AppCompatActivity() {
                     "battery=${if (batteryProtection) "$batteryStart-$batteryStop%" else "off"}, " +
                     "agent volume ${if (agentVolStep > 0) "+$agentVolStep" else "$agentVolStep"})"
         )
-        Toast.makeText(this, "Saved — reconnecting", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_saved_reconnecting), Toast.LENGTH_SHORT).show()
         // Apply immediately rather than waiting for the next restart.  This
         // has to rebuild the client, not just re-register: the server, port,
         // credentials and STUN choice are all read at bring-up.
@@ -751,10 +806,10 @@ class MainActivity : AppCompatActivity() {
         val status = findViewById<TextView>(R.id.tvCfgBatteryStatus)
         val prefs = getSharedPreferences("gateway", MODE_PRIVATE)
         if (!prefs.getBoolean("battery_protection", false)) {
-            status.text = "Disabled"
+            status.text = getString(R.string.cfg_battery_status_disabled)
             return
         }
-        status.text = "Checking charger status…"
+        status.text = getString(R.string.cfg_battery_checking)
         Thread({
             val out = RootShell.execForOutput(
                 "echo CAP=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null); " +
@@ -770,10 +825,10 @@ class MainActivity : AppCompatActivity() {
             val disabled = values["DIS"] == "1"
             val online = values["USB"] == "1"
             val text = when {
-                cap == null -> "Root charger control is unavailable"
-                !online -> "Protection enabled · USB not connected · ${cap}%"
-                disabled -> "Protection enabled · charging stopped at ${cap}%"
-                else -> "Protection enabled · charging allowed at ${cap}%"
+                cap == null -> getString(R.string.bat_root_unavailable)
+                !online -> getString(R.string.bat_usb_disconnected, cap)
+                disabled -> getString(R.string.bat_charging_stopped, cap)
+                else -> getString(R.string.bat_charging_allowed, cap)
             }
             runOnUiThread { if (!isFinishing) status.text = text }
         }, "battery-status").start()
@@ -789,7 +844,7 @@ class MainActivity : AppCompatActivity() {
         })
         setCallButtonState(
             btnHomeMute,
-            if (agentMuted) "Unmute" else "Mute",
+            getString(if (agentMuted) R.string.btn_unmute else R.string.btn_mute),
             if (agentMuted) R.drawable.ic_fa_volume_high else R.drawable.ic_fa_volume_xmark
         )
         appendLog(if (agentMuted) "Agent muted to caller" else "Agent unmuted")
@@ -811,7 +866,7 @@ class MainActivity : AppCompatActivity() {
             else -> true            // any call state means registration held
         }
         gatewayOnline = online
-        tvHomeStatusPill.text = if (online) "● Online" else "● Offline"
+        tvHomeStatusPill.text = getString(if (online) R.string.status_online else R.string.status_offline)
         tvHomeStatusPill.setTextColor(
             Color.parseColor(if (online) "#34D399" else "#F87171")
         )
@@ -838,12 +893,11 @@ class MainActivity : AppCompatActivity() {
             tvHomeCallFrom.text = number
             val dest = getSharedPreferences("gateway", MODE_PRIVATE)
                 .getString("own_number", "") ?: ""
-            tvHomeCallTo.text = if (dest.isNotEmpty()) "Connected to $dest" else "Connected"
+            tvHomeCallTo.text = if (dest.isNotEmpty()) getString(R.string.home_connected_to, dest)
+                else getString(R.string.home_connected)
             // Inbound is the normal direction for a gateway; a dialler-initiated
             // call is the other way round.
-            tvHomeCallDirection.text =
-                if (com.callagent.gateway.gsm.GsmCallManager.activeCallState ==
-                    android.telecom.Call.STATE_ACTIVE && gsmCallActive) "GSM → SIP" else "GSM → SIP"
+            tvHomeCallDirection.text = getString(R.string.dir_gsm_sip)
             startCallTimer()
         } else {
             homeCallCard.visibility = View.GONE
@@ -855,7 +909,7 @@ class MainActivity : AppCompatActivity() {
             if (agentMuted) {
                 agentMuted = false
                 if (::btnHomeMute.isInitialized) {
-                    setCallButtonState(btnHomeMute, "Mute", R.drawable.ic_fa_volume_xmark)
+                    setCallButtonState(btnHomeMute, getString(R.string.btn_mute), R.drawable.ic_fa_volume_xmark)
                 }
             }
             // Snoop likewise — the monitor lives with the RTP session and dies
@@ -1046,19 +1100,19 @@ class MainActivity : AppCompatActivity() {
             // A blank line is enough to separate the fields from the message;
             // the fields are aligned and the body is not, so the boundary
             // reads without a rule.
-            text = header.toString() + "\n" + entry.text.ifEmpty { "(no text)" }
+            text = header.toString() + "\n" + entry.text.ifEmpty { getString(R.string.traffic_no_text) }
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Message detail")
+            .setTitle(getString(R.string.dlg_message_detail))
             .setView(ScrollView(this).apply { addView(body) })
-            .setPositiveButton("Close", null)
-            .setNeutralButton("Copy") { _, _ ->
+            .setPositiveButton(getString(R.string.dlg_close), null)
+            .setNeutralButton(getString(R.string.dlg_copy)) { _, _ ->
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 cm.setPrimaryClip(
                     android.content.ClipData.newPlainText("SMS detail", body.text)
                 )
-                Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_copied), Toast.LENGTH_SHORT).show()
             }
             .show()
     }
@@ -1072,9 +1126,9 @@ class MainActivity : AppCompatActivity() {
             text = if (mobile) mobileDetailsFast() else wifiDetailsFast()
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle(if (mobile) "Mobile network" else "WiFi")
+            .setTitle(getString(if (mobile) R.string.dlg_mobile_network else R.string.dlg_wifi))
             .setView(ScrollView(this).apply { addView(body) })
-            .setPositiveButton("Close", null)
+            .setPositiveButton(getString(R.string.dlg_close), null)
             .show()
 
         fun append(line: String) = runOnUiThread {
@@ -1384,14 +1438,14 @@ class MainActivity : AppCompatActivity() {
             // What changes is the second line, which carries the message
             // itself, and the slot where a call shows its duration.
             row.findViewById<TextView>(R.id.tvRowSub).text = when {
-                sms -> e.text.replace('\n', ' ').trim().ifEmpty { "(no text)" }
-                e.durationSec > 0 -> if (incoming) "GSM → SIP" else "SIP → GSM"
-                else -> "Not connected"
+                sms -> e.text.replace('\n', ' ').trim().ifEmpty { getString(R.string.traffic_no_text) }
+                e.durationSec > 0 -> getString(if (incoming) R.string.dir_gsm_sip else R.string.dir_sip_gsm)
+                else -> getString(R.string.traffic_not_connected)
             }
             val dur = row.findViewById<TextView>(R.id.tvRowDuration)
             when {
                 sms -> {
-                    dur.text = "SMS"
+                    dur.text = getString(R.string.badge_sms)
                     dur.setTextColor(Color.parseColor("#60A5FA"))
                 }
                 e.durationSec > 0 -> {
@@ -1406,7 +1460,7 @@ class MainActivity : AppCompatActivity() {
             val d = java.util.Date(e.timestamp)
             val sameDay = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(d) == today
             row.findViewById<TextView>(R.id.tvRowTime).text =
-                if (sameDay) hhmm.format(d) else "Earlier"
+                if (sameDay) hhmm.format(d) else getString(R.string.traffic_earlier)
             if (sms) {
                 row.isClickable = true
                 row.isFocusable = true
@@ -1764,7 +1818,7 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleInCallClose() {
         if (!inCallOpen || inCallCloseScheduled) return
         inCallCloseScheduled = true
-        tvInCallStatus.text = "Call ended"
+        tvInCallStatus.text = getString(R.string.incall_ended)
         callTimerHandler.removeCallbacks(gsmPollRunnable)
         callTimerHandler.postDelayed({ closeInCallScreen() }, 1500)
     }
@@ -1783,12 +1837,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateMonitorButtons() {
         if (::btnInCallMonitor.isInitialized) {
-            btnInCallMonitor.text = if (monitoring) "STOP LISTENING" else "LISTEN IN"
+            btnInCallMonitor.text = getString(if (monitoring) R.string.incall_stop_listen else R.string.incall_listen)
         }
         if (::btnHomeSnoop.isInitialized) {
             setCallButtonState(
                 btnHomeSnoop,
-                if (monitoring) "Stop" else "Snoop",
+                getString(if (monitoring) R.string.btn_snoop_stop else R.string.btn_snoop),
                 if (monitoring) R.drawable.ic_fa_circle_stop else R.drawable.ic_fa_headphones
             )
         }
@@ -1801,7 +1855,7 @@ class MainActivity : AppCompatActivity() {
         callStartTime = 0L
         lastGsmPollState = -1
         tvInCallNumber.text = number
-        tvInCallStatus.text = "Calling..."
+        tvInCallStatus.text = getString(R.string.incall_calling)
         tvInCallTimer.visibility = View.GONE
         viewBeforeInCall = currentTab
         // Hide tabs, show in-call overlay
@@ -1835,7 +1889,7 @@ class MainActivity : AppCompatActivity() {
     private fun endCallFromInCallScreen() {
         val call = com.callagent.gateway.gsm.GsmCallManager.activeCall
         if (call != null) {
-            tvInCallStatus.text = "Ending..."
+            tvInCallStatus.text = getString(R.string.incall_ending)
             com.callagent.gateway.gsm.GsmCallManager.hangupCall()
         } else {
             closeInCallScreen()
@@ -1892,18 +1946,18 @@ class MainActivity : AppCompatActivity() {
     private fun clearLog() {
         tvLog.text = ""
         GatewayService.clearLogBuffer()
-        Toast.makeText(this, "Log cleared", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_log_cleared), Toast.LENGTH_SHORT).show()
     }
 
     private fun copyLog() {
         val logText = tvLog.text.toString()
         if (logText.isEmpty()) {
-            Toast.makeText(this, "Log is empty", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_log_empty), Toast.LENGTH_SHORT).show()
             return
         }
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("callagent log", logText))
-        Toast.makeText(this, "Log copied to clipboard", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_log_copied), Toast.LENGTH_SHORT).show()
     }
 
     // ── Helpers ──────────────────────────────────────────
@@ -2017,5 +2071,8 @@ class MainActivity : AppCompatActivity() {
         private const val REQ_PERMS = 100
         private const val REQ_DEFAULT_DIALER = 101
         private const val MAX_CALL_LOG = 20
+
+        // Донат полностью добровольный и ни на что в приложении не влияет (MIT).
+        const val DONATE_DA_URL = "https://www.donationalerts.com/r/hinducoder"
     }
 }

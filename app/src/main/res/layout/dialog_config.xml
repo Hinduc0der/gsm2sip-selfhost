@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="SIP Server"
+        android:text="@string/cfg_sip_server"
         android:textStyle="bold"
         android:textColor="@color/text_label" />
 
@@ -30,7 +30,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="SIP Port"
+        android:text="@string/cfg_sip_port"
         android:textStyle="bold"
         android:textColor="@color/text_label"
         android:layout_marginTop="12dp" />
@@ -52,7 +52,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="SIP Username"
+        android:text="@string/cfg_sip_username"
         android:textStyle="bold"
         android:textColor="@color/text_label"
         android:layout_marginTop="12dp" />
@@ -61,7 +61,7 @@
         android:id="@+id/etSipUser"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="extension"
+        android:hint="@string/cfg_hint_username"
         android:textColor="@color/text_primary"
         android:textColorHint="@color/text_hint"
         android:background="@drawable/input_bg"
@@ -74,7 +74,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="SIP Password"
+        android:text="@string/cfg_sip_password"
         android:textStyle="bold"
         android:textColor="@color/text_label"
         android:layout_marginTop="12dp" />
@@ -83,7 +83,7 @@
         android:id="@+id/etSipPassword"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="password"
+        android:hint="@string/cfg_hint_password"
         android:textColor="@color/text_primary"
         android:textColorHint="@color/text_hint"
         android:background="@drawable/input_bg"
@@ -99,7 +99,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Own Number (SIM)"
+        android:text="@string/cfg_own_number"
         android:textStyle="bold"
         android:textColor="@color/text_label"
         android:layout_marginTop="12dp" />
@@ -108,7 +108,7 @@
         android:id="@+id/etOwnNumber"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="international, e.g. +4915112345678"
+        android:hint="@string/cfg_hint_own_number"
         android:textColor="@color/text_primary"
         android:textColorHint="@color/text_hint"
         android:background="@drawable/input_bg"
@@ -122,7 +122,7 @@
         android:id="@+id/cbAutoconnect"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Autoconnect on startup"
+        android:text="@string/cfg_autoconnect"
         android:textColor="@color/text_label"
         android:layout_marginTop="16dp"
         android:checked="true" />

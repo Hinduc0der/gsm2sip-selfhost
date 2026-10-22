@@ -15,7 +15,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="GSM"
+            android:text="@string/info_gsm"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@color/primary" />
@@ -29,7 +29,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Network"
+                android:text="@string/info_network"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -51,7 +51,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Type"
+                android:text="@string/info_type"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -73,7 +73,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Signal"
+                android:text="@string/info_signal"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -95,7 +95,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Cell ID"
+                android:text="@string/info_cell_id"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -117,7 +117,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="IMEI"
+                android:text="@string/info_imei"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -139,7 +139,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Phone"
+                android:text="@string/info_phone"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -163,7 +163,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="WiFi"
+            android:text="@string/dlg_wifi"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@color/primary" />
@@ -177,7 +177,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Network"
+                android:text="@string/info_network"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -199,7 +199,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Band"
+                android:text="@string/info_band"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -221,7 +221,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Signal"
+                android:text="@string/info_signal"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -243,7 +243,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Local IP"
+                android:text="@string/info_local_ip"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -267,7 +267,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Internet"
+            android:text="@string/info_internet"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@color/primary" />
@@ -281,7 +281,7 @@
             <TextView
                 android:layout_width="110dp"
                 android:layout_height="wrap_content"
-                android:text="Public IP"
+                android:text="@string/info_public_ip"
                 android:textSize="13sp"
                 android:textColor="@color/text_label" />
             <TextView
@@ -289,7 +289,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="detecting…"
+                android:text="@string/info_detecting"
                 android:textSize="13sp"
                 android:textColor="@color/text_primary" />
         </LinearLayout>
@@ -306,7 +306,7 @@
             android:id="@+id/btnCheckSupport"
             android:layout_width="match_parent"
             android:layout_height="40dp"
-            android:text="Check Gateway Support"
+            android:text="@string/info_check_support"
             android:textSize="13sp"
             android:textColor="#FFFFFF"
             android:backgroundTint="@color/primary"

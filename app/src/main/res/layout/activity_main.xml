@@ -38,7 +38,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GSM2SIP"
+                        android:text="@string/home_gateway_title"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
@@ -47,7 +47,7 @@
                         android:id="@+id/tvHomeStatusPill"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="● Offline"
+                        android:text="@string/status_offline"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_secondary"
@@ -64,7 +64,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="33dp"
                         android:gravity="center"
-                        android:contentDescription="SIP signalling encrypted with TLS"
+                        android:contentDescription="@string/desc_tls_badge"
                         android:background="@drawable/input_bg"
                         android:drawableStart="@drawable/ic_shield_lock"
                         android:paddingHorizontal="9dp"
@@ -77,7 +77,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="33dp"
                         android:gravity="center"
-                        android:contentDescription="Call audio encrypted with SRTP"
+                        android:contentDescription="@string/desc_srtp_badge"
                         android:background="@drawable/input_bg"
                         android:drawableStart="@drawable/ic_fa_key"
                         android:paddingHorizontal="9dp"
@@ -90,13 +90,43 @@
                         android:layout_height="1dp"
                         android:layout_weight="1" />
 
+                    <!-- Переключатель языка интерфейса.  Смена языка идёт через
+                         per-app locale API AppCompat (setApplicationLocales),
+                         он сам пересоздаёт активити и подхватывает ресурсы.
+                         Активная кнопка подсвечивается из кода. -->
+                    <TextView
+                        android:id="@+id/btnLangRu"
+                        android:layout_width="wrap_content"
+                        android:layout_height="33dp"
+                        android:gravity="center"
+                        android:text="@string/lang_ru"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_secondary"
+                        android:background="@drawable/input_bg"
+                        android:paddingHorizontal="9dp"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:id="@+id/btnLangEn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="33dp"
+                        android:gravity="center"
+                        android:text="@string/lang_en"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_secondary"
+                        android:background="@drawable/input_bg"
+                        android:paddingHorizontal="9dp"
+                        android:layout_marginEnd="6dp" />
+
                     <ImageButton
                         android:id="@+id/btnHomeMenu"
                         android:layout_width="42dp"
                         android:layout_height="42dp"
                         android:src="@drawable/ic_gear"
                         android:background="@drawable/input_bg"
-                        android:contentDescription="Menu" />
+                        android:contentDescription="@string/desc_menu" />
                 </LinearLayout>
 
                 <!-- Link state: the two networks this gateway depends on.
@@ -150,7 +180,7 @@
                         android:id="@+id/btnFilterAll"
                         android:layout_width="wrap_content"
                         android:layout_height="42dp"
-                        android:text="All"
+                        android:text="@string/filter_all"
                         android:textSize="13sp"
                         android:textAllCaps="false"
                         android:textColor="#052E16"
@@ -165,7 +195,7 @@
                         android:id="@+id/btnFilterIncoming"
                         android:layout_width="wrap_content"
                         android:layout_height="42dp"
-                        android:text="Incoming"
+                        android:text="@string/filter_incoming"
                         android:textSize="13sp"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
@@ -180,7 +210,7 @@
                         android:id="@+id/btnFilterOutgoing"
                         android:layout_width="wrap_content"
                         android:layout_height="42dp"
-                        android:text="Outgoing"
+                        android:text="@string/filter_outgoing"
                         android:textSize="13sp"
                         android:textAllCaps="false"
                         android:textColor="@color/text_primary"
@@ -225,7 +255,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="● ACTIVE CALL"
+                                android:text="@string/active_call"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
                                 android:textColor="#34D399" />
@@ -234,7 +264,7 @@
                                 android:id="@+id/tvHomeCallDirection"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="GSM → SIP"
+                                android:text="@string/dir_gsm_sip"
                                 android:textSize="11sp"
                                 android:textColor="@color/text_secondary"
                                 android:background="@drawable/input_bg"
@@ -286,7 +316,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="62dp"
                                 android:layout_weight="1"
-                                android:text="Mute"
+                                android:text="@string/btn_mute"
                                 android:textSize="11sp"
                                 android:textColor="@color/text_primary"
                                 android:backgroundTint="@color/btn_secondary"
@@ -304,7 +334,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="62dp"
                                 android:layout_weight="1"
-                                android:text="Snoop"
+                                android:text="@string/btn_snoop"
                                 android:textSize="11sp"
                                 android:textColor="@color/text_primary"
                                 android:backgroundTint="@color/btn_secondary"
@@ -322,7 +352,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="62dp"
                                 android:layout_weight="1"
-                                android:text="End"
+                                android:text="@string/btn_end"
                                 android:textSize="11sp"
                                 android:textColor="#FFFFFF"
                                 android:backgroundTint="#B91C1C"
@@ -349,7 +379,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="RECENT CALLS"
+                            android:text="@string/recent_calls"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_secondary" />
@@ -358,7 +388,7 @@
                             android:id="@+id/tvHomeTrafficDay"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Today"
+                            android:text="@string/traffic_today"
                             android:textSize="12sp"
                             android:textColor="@color/text_secondary" />
                     </LinearLayout>
@@ -373,10 +403,23 @@
                         android:id="@+id/tvHomeTrafficEmpty"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="No calls yet"
+                        android:text="@string/traffic_empty"
                         android:textSize="13sp"
                         android:textColor="@color/text_hint"
                         android:paddingVertical="14dp" />
+
+                    <!-- Ненавязчивая добровольная ссылка доната (DonationAlerts) в самом низу
+                         прокручиваемой части главного экрана. -->
+                    <TextView
+                        android:id="@+id/tvDonate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/donate_footer"
+                        android:textSize="12sp"
+                        android:textColor="@color/accent"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="12dp" />
                     </LinearLayout>
                 </ScrollView>
 
@@ -404,13 +447,13 @@
                         android:src="@drawable/ic_arrow_back"
                         android:scaleType="centerInside"
                         android:background="@drawable/input_bg"
-                        android:contentDescription="Back" />
+                        android:contentDescription="@string/desc_back" />
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Settings"
+                        android:text="@string/settings_title"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
@@ -426,7 +469,7 @@
                         android:src="@drawable/ic_logs"
                         android:scaleType="centerInside"
                         android:background="@drawable/input_bg"
-                        android:contentDescription="Logs" />
+                        android:contentDescription="@string/desc_logs" />
                 </LinearLayout>
 
                 <ScrollView
@@ -448,13 +491,13 @@
                             android:layout_gravity="center_horizontal"
                             android:layout_marginTop="14dp"
                             android:src="@mipmap/ic_launcher"
-                            android:contentDescription="gsm2sip" />
+                            android:contentDescription="@string/desc_app_logo" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center_horizontal"
-                            android:text="gsm2sip"
+                            android:text="@string/app_logo_label"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
@@ -470,23 +513,23 @@
                             android:paddingTop="2dp"
                             android:paddingBottom="14dp" />
 
-                        <TextView style="@style/CfgLabel" android:text="SIP Server" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_sip_server" />
                         <EditText android:id="@+id/etCfgServer" style="@style/CfgField"
                             android:hint="callagent.pro" android:inputType="textUri" />
 
-                        <TextView style="@style/CfgLabel" android:text="SIP Port" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_sip_port" />
                         <EditText android:id="@+id/etCfgPort" style="@style/CfgField"
                             android:hint="5060" android:inputType="number" />
 
-                        <TextView style="@style/CfgLabel" android:text="SIP Username" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_sip_username" />
                         <EditText android:id="@+id/etCfgUser" style="@style/CfgField"
-                            android:hint="extension" android:inputType="text" />
+                            android:hint="@string/cfg_hint_username" android:inputType="text" />
 
-                        <TextView style="@style/CfgLabel" android:text="SIP Password" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_sip_password" />
                         <EditText android:id="@+id/etCfgPass" style="@style/CfgField"
-                            android:hint="password" android:inputType="textPassword" />
+                            android:hint="@string/cfg_hint_password" android:inputType="textPassword" />
 
-                        <TextView style="@style/CfgLabel" android:text="Own Number (SIM)" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_own_number" />
                         <!-- One field per active SIM, built at runtime: the
                              slots a device has, and which of them hold a live
                              SIM, are only knowable on the device. -->
@@ -499,12 +542,12 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Sent as the SIP destination so the server can map the call to an assistant. Without it the gateway addresses its own extension and the call loops back."
+                            android:text="@string/cfg_own_number_hint_text"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
 
-                        <TextView style="@style/CfgLabel" android:text="Audio Codec" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_audio_codec" />
 
                         <RadioGroup
                             android:id="@+id/rgCfgCodec"
@@ -517,7 +560,7 @@
                                 android:id="@+id/rbCodecG722"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="G.722 only — wideband 16 kHz (recommended)"
+                                android:text="@string/cfg_codec_g722"
                                 android:buttonTint="@color/accent"
                                 android:textColor="@color/text_label" />
 
@@ -525,7 +568,7 @@
                                 android:id="@+id/rbCodecBoth"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="G.722 preferred, G.711 allowed"
+                                android:text="@string/cfg_codec_both"
                                 android:buttonTint="@color/accent"
                                 android:textColor="@color/text_label" />
 
@@ -533,7 +576,7 @@
                                 android:id="@+id/rbCodecG711"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="G.711 only — narrowband 8 kHz"
+                                android:text="@string/cfg_codec_g711"
                                 android:buttonTint="@color/accent"
                                 android:textColor="@color/text_label" />
                         </RadioGroup>
@@ -541,12 +584,12 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Offering G.711 alongside G.722 usually means the server picks G.711 and every call is narrowband, which is why G.722 alone is the default."
+                            android:text="@string/cfg_codec_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
 
-                        <TextView style="@style/CfgLabel" android:text="Agent Volume" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_agent_volume" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -579,18 +622,18 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="How loud the agent is to the GSM caller. 0 is what the detected device asks for; each step roughly a third louder or quieter. Raise it if callers say the agent is faint, lower it if the line distorts."
+                            android:text="@string/cfg_agent_volume_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
 
-                        <TextView style="@style/CfgLabel" android:text="Battery charge protection" />
+                        <TextView style="@style/CfgLabel" android:text="@string/cfg_battery_protection" />
 
                         <CheckBox
                             android:id="@+id/cbCfgBatteryProtection"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Keep the battery between these limits"
+                            android:text="@string/cfg_battery_keep"
                             android:buttonTint="@color/accent"
                             android:textColor="@color/text_label"
                             android:layout_marginTop="4dp" />
@@ -605,7 +648,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Start charging below"
+                                android:text="@string/cfg_battery_start"
                                 android:textColor="@color/text_label" />
 
                             <EditText
@@ -623,7 +666,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="%     Stop at"
+                                android:text="@string/cfg_battery_stop"
                                 android:textColor="@color/text_label"
                                 android:layout_marginStart="12dp" />
 
@@ -642,7 +685,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="%"
+                                android:text="@string/cfg_percent"
                                 android:textColor="@color/text_label"
                                 android:layout_marginStart="4dp" />
                         </LinearLayout>
@@ -651,7 +694,7 @@
                             android:id="@+id/tvCfgBatteryStatus"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Disabled"
+                            android:text="@string/cfg_battery_status_disabled"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
@@ -659,7 +702,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Requires the gsm2sip Magisk module. The default 35%–65% range reduces battery wear while the phone stays connected to USB."
+                            android:text="@string/cfg_battery_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="4dp" />
@@ -668,7 +711,7 @@
                             android:id="@+id/cbCfgAutoconnect"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Autoconnect on startup"
+                            android:text="@string/cfg_autoconnect"
                             android:buttonTint="@color/accent"
                             android:textColor="@color/text_label"
                             android:layout_marginTop="16dp" />
@@ -677,7 +720,7 @@
                             android:id="@+id/cbCfgUseStun"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Use STUN"
+                            android:text="@string/cfg_use_stun"
                             android:buttonTint="@color/accent"
                             android:textColor="@color/text_label"
                             android:layout_marginTop="8dp" />
@@ -685,7 +728,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Finds the public IP so SIP and RTP survive NAT. Turn off for a SIP server on the local network."
+                            android:text="@string/cfg_stun_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
@@ -694,7 +737,7 @@
                             android:id="@+id/cbCfgTls"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Enable TLS"
+                            android:text="@string/cfg_enable_tls"
                             android:buttonTint="@color/accent"
                             android:textColor="@color/text_label"
                             android:layout_marginTop="8dp" />
@@ -702,7 +745,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Encrypts SIP signalling — registration, calls and SMS text. Call audio (RTP) is not encrypted either way. The server must offer TLS, usually on port 5061."
+                            android:text="@string/cfg_tls_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
@@ -711,7 +754,7 @@
                             android:id="@+id/cbCfgSrtp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Encrypt audio (SRTP)"
+                            android:text="@string/cfg_encrypt_audio_srtp"
                             android:buttonTint="@color/accent"
                             android:textColor="@color/text_label"
                             android:layout_marginTop="8dp" />
@@ -720,7 +763,7 @@
                             android:id="@+id/tvCfgSrtpHint"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="SDES-keyed SRTP (RFC 3711). Requires TLS: the keys travel inside the SIP signalling, so over plain UDP they would be readable by anyone on the path."
+                            android:text="@string/cfg_srtp_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
@@ -729,7 +772,7 @@
                             android:id="@+id/cbCfgTranslit"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="ASCII-only outgoing SMS"
+                            android:text="@string/cfg_ascii_sms"
                             android:buttonTint="@color/accent"
                             android:textColor="@color/text_label"
                             android:layout_marginTop="8dp" />
@@ -737,7 +780,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Rewrites accents before sending: für becomes fuer. Turn on if umlauts arrive mangled. Cyrillic, Hebrew, Arabic and other non-Latin text is never rewritten — it is sent as-is."
+                            android:text="@string/cfg_ascii_hint"
                             android:textSize="12sp"
                             android:textColor="@color/text_hint"
                             android:paddingTop="6dp" />
@@ -747,7 +790,7 @@
                             android:layout_width="wrap_content"
                             android:layout_gravity="center_horizontal"
                             android:layout_height="40dp"
-                            android:text="CLEAR RECENTS"
+                            android:text="@string/cfg_clear_recents"
                             android:textSize="12sp"
                             android:paddingStart="20dp"
                             android:paddingEnd="20dp"
@@ -764,7 +807,7 @@
                             android:id="@+id/btnCfgSave"
                             android:layout_width="match_parent"
                             android:layout_height="52dp"
-                            android:text="SAVE"
+                            android:text="@string/cfg_save"
                             android:textStyle="bold"
                             android:textColor="@color/accent_on"
                             android:backgroundTint="@color/accent"
@@ -799,13 +842,13 @@
                         android:src="@drawable/ic_arrow_back"
                         android:scaleType="centerInside"
                         android:background="@drawable/input_bg"
-                        android:contentDescription="Back" />
+                        android:contentDescription="@string/desc_back" />
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Logs"
+                        android:text="@string/logs_title"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
@@ -818,7 +861,7 @@
                         android:src="@drawable/ic_copy"
                         android:scaleType="centerInside"
                         android:background="@drawable/input_bg"
-                        android:contentDescription="Copy log"
+                        android:contentDescription="@string/desc_copy_log"
                         android:layout_marginEnd="8dp" />
 
                     <ImageButton
@@ -828,7 +871,7 @@
                         android:src="@drawable/ic_trash"
                         android:scaleType="centerInside"
                         android:background="@drawable/input_bg"
-                        android:contentDescription="Clear log" />
+                        android:contentDescription="@string/desc_clear_log" />
                 </LinearLayout>
 
                 <ScrollView
@@ -878,7 +921,7 @@
             android:id="@+id/tvInCallStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Calling..."
+            android:text="@string/incall_calling"
             android:textSize="16sp"
             android:textColor="@color/text_secondary" />
 
@@ -921,7 +964,7 @@
             android:layout_height="56dp"
             android:layout_marginHorizontal="24dp"
             android:layout_marginBottom="12dp"
-            android:text="LISTEN IN"
+            android:text="@string/incall_listen"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
@@ -936,7 +979,7 @@
             android:layout_height="64dp"
             android:layout_marginHorizontal="24dp"
             android:layout_marginBottom="32dp"
-            android:text="END CALL"
+            android:text="@string/incall_end_call"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"

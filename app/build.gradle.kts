@@ -15,6 +15,11 @@ android {
         targetSdk = 34
         versionCode = 438
         versionName = "1.3.11"
+
+        // Интерфейс локализован только на английский и русский.  Ограничиваем
+        // набор локалей ресурсов — лишние конфигурации в APK не попадают, а
+        // per-app locale API AppCompat корректно выбирает ru/en.
+        resourceConfigurations += listOf("en", "ru")
     }
 
     // A release build is signed with the same debug key the debug build uses.
