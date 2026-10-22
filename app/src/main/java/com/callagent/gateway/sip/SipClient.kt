@@ -700,6 +700,28 @@ class SipClient(
         contentType: String = "text/plain;charset=UTF-8"
     ): Int {
         if (!running.get()) return 0
+        // In built-in registrar mode there is no upstream server to relay an
+        // out-of-dialog MESSAGE (a delivered SMS or its delivery report): it
+        // must go straight to the softphone that is registered right now, the
+        // same way an inbound call does.  The targetUri the caller built points
+        // at the configured server (an Asterisk routing key) and the stored
+        // serverAddress may be stale — both are meaningless here, so the live
+        // registration's contact and source address win instead.  With nothing
+        // registered the message cannot be delivered, so it is left queued.
+        val reg = if (builtinRegistrar) currentRegistration() else null
+        val effectiveTarget = reg?.contactUri ?: targetUri
+        val dest = reg?.address ?: serverAddress
+        if (builtinRegistrar && reg == null) {
+            uiLog("SIP MESSAGE: no live registration — leaving queued")
+            return 0
+        }
+        // The From URI becomes the softphone's chat peer; a reply is a fresh
+        // out-of-dialog MESSAGE routed by that URI's host:port.  In registrar
+        // mode we are that endpoint, so From must carry the port we actually
+        // listen on (the same host:port as our Via) — otherwise the reply goes
+        // to the default 5060, where nothing listens, and is lost silently.
+        // Without a port a reply to an inbound SMS never comes back.
+        val fromDomain = if (builtinRegistrar) "$publicIp:$advertisedPort" else serverDomain
         val callId = "${System.currentTimeMillis()}msg@$publicIp"
         val fromTag = "gw${(100000000..999999999).random()}"
         val txn = MessageTxn()
@@ -708,10 +730,10 @@ class SipClient(
             var cseq = 1
             sendTo(
                 SipBuilder.message(
-                    targetUri, fromUser, serverDomain, publicIp, advertisedPort,
+                    effectiveTarget, fromUser, fromDomain, publicIp, advertisedPort,
                     callId, cseq, body, contentType, extraHeaders, fromTag
                 ),
-                serverAddress
+                dest
             )
             if (!txn.latch.await(MESSAGE_TIMEOUT_SEC, TimeUnit.SECONDS)) return 0
 
@@ -723,14 +745,14 @@ class SipClient(
                 pendingMessages[callId] = retry
                 cseq++
                 val auth = SipAuth.buildAuthHeader(
-                    "MESSAGE", targetUri, username, password, challenge
+                    "MESSAGE", effectiveTarget, username, password, challenge
                 )
                 sendTo(
                     SipBuilder.message(
-                        targetUri, fromUser, serverDomain, publicIp, advertisedPort,
+                        effectiveTarget, fromUser, fromDomain, publicIp, advertisedPort,
                         callId, cseq, body, contentType, extraHeaders, fromTag, auth
                     ),
-                    serverAddress
+                    dest
                 )
                 if (!retry.latch.await(MESSAGE_TIMEOUT_SEC, TimeUnit.SECONDS)) return 0
                 return retry.status

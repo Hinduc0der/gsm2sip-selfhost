@@ -602,7 +602,32 @@ class GatewayService : Service() {
      * nothing is answered 202 until it is safely on disk.
      */
     fun onSmsSendRequest(msg: com.callagent.gateway.sip.SipMessage): Pair<Int, List<String>> {
-        val type = msg.contentType?.lowercase().orEmpty()
+        // Modern SIP SIMPLE clients (Linphone among them) do not send chat text
+        // as a bare text/plain MESSAGE.  They wrap it in a CPIM envelope
+        // (RFC 3862) and send delivery/read receipts as IMDN (RFC 5438) the
+        // same way.  Refusing everything but text/plain — as this did — means a
+        // normal softphone's message never becomes an SMS.  So: unwrap CPIM to
+        // reach the real text, and acknowledge IMDN receipts without sending
+        // anything (they are about messages WE delivered, not new SMS to send).
+        var type = msg.contentType?.lowercase().orEmpty()
+        var sendText = msg.body
+        if (type.startsWith("message/imdn+xml")) {
+            broadcastLog("SMS: IMDN receipt acknowledged (nothing to send)")
+            return 200 to emptyList()
+        }
+        if (type.startsWith("message/cpim")) {
+            val inner = unwrapCpim(msg.body)
+            if (inner == null) {
+                broadcastLog("SMS send refused: malformed CPIM envelope")
+                return 400 to emptyList()
+            }
+            type = inner.first.lowercase()
+            sendText = inner.second
+            if (type.startsWith("message/imdn+xml")) {
+                broadcastLog("SMS: IMDN receipt acknowledged (CPIM, nothing to send)")
+                return 200 to emptyList()
+            }
+        }
         if (type.isNotEmpty() && !type.startsWith("text/plain")) {
             broadcastLog("SMS send refused: unsupported Content-Type '$type'")
             return 415 to emptyList()
@@ -620,7 +645,7 @@ class GatewayService : Service() {
         // is not what the modem mis-decodes.  Folding it would turn a Russian,
         // Hebrew or Arabic message that would have arrived intact into a row
         // of '?', so it is sent through unchanged even with the setting on.
-        val rawText = msg.body
+        val rawText = sendText
         val foldToAscii = getSharedPreferences("gateway", MODE_PRIVATE)
             .getBoolean("translit_ascii", false)
         val folded =
@@ -695,6 +720,39 @@ class GatewayService : Service() {
             Log.w(TAG, "Could not schedule SMS dispatch: ${e.message}")
         }
         return 202 to cost
+    }
+
+    /**
+     * Unwrap a CPIM envelope (RFC 3862), returning the inner (contentType, body).
+     *
+     * CPIM is two MIME layers: a block of message headers, a blank line, then a
+     * nested MIME part that has its own headers, another blank line, and the
+     * actual payload.  We only need that payload and its type — the text the
+     * user typed, and whether it is text/plain.  Content-Length, when present,
+     * is honoured in bytes so a trailing CRLF the client appended does not ride
+     * along into the SMS.  Returns null if the structure is not CPIM-shaped.
+     */
+    private fun unwrapCpim(cpim: String): Pair<String, String>? {
+        val sep = Regex("\\r?\\n\\r?\\n")
+        val first = sep.find(cpim) ?: return null
+        val afterOuter = cpim.substring(first.range.last + 1)
+        val second = sep.find(afterOuter) ?: return null
+        val mimeHeaders = afterOuter.substring(0, second.range.first)
+        var content = afterOuter.substring(second.range.last + 1)
+        val innerType = mimeHeaders.lineSequence()
+            .firstOrNull { it.trim().startsWith("Content-Type:", ignoreCase = true) }
+            ?.substringAfter(':')?.trim()
+            ?: "text/plain"
+        val declaredLen = mimeHeaders.lineSequence()
+            .firstOrNull { it.trim().startsWith("Content-Length:", ignoreCase = true) }
+            ?.substringAfter(':')?.trim()?.toIntOrNull()
+        if (declaredLen != null) {
+            val bytes = content.toByteArray(Charsets.UTF_8)
+            if (bytes.size >= declaredLen) {
+                content = String(bytes, 0, declaredLen, Charsets.UTF_8)
+            }
+        }
+        return innerType to content
     }
 
     /** How the message will go out: parts it splits into, and its encoding. */
