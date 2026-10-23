@@ -203,6 +203,10 @@ HAL-микшеры и тракт захвата. Если тракта нет - 
 
 Аппарат уже прошит LineageOS 16 + Magisk, нужно поставить только наш софт. Внешнего сервера нет.
 
+> 📦 **Готовый модуль - в [Releases](https://github.com/Hinduc0der/gsm2sip-selfhost/releases):** скачай
+> `gsm2sip-selfhost-*-magisk.zip` и переходи сразу к шагу 2. Собирать самому (шаг 1) нужно, только если
+> хочешь из исходников.
+
 1. **Собрать модуль** (на ПК): в корне репозитория `./build.sh release` (JDK 17, Android SDK) →
    на выходе `gateway-magisk.zip` - это APK, права и tinymix вместе. Подробнее и про грабли
    сборки - [`docs/build.md`](docs/build.md).

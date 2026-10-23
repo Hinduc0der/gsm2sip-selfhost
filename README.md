@@ -186,6 +186,10 @@ HAL mixers and the capture path. No path → track B is closed on this phone by 
 The phone is already flashed with LineageOS 16 + Magisk; you only install our software. There is
 no external server.
 
+> 📦 **A prebuilt module is in [Releases](https://github.com/Hinduc0der/gsm2sip-selfhost/releases):**
+> download `gsm2sip-selfhost-*-magisk.zip` and skip to step 2. Building it yourself (step 1) is only
+> needed if you want to build from source.
+
 1. **Build the module** (on a PC): in the repo root, `./build.sh release` (JDK 17, Android SDK) →
    produces `gateway-magisk.zip` - the APK, permissions and tinymix together. More, plus build
    gotchas, in [`docs/build.md`](docs/build.md) (Russian).
