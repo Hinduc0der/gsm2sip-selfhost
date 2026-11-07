@@ -1265,7 +1265,7 @@ class CallOrchestrator(
         private const val AUDIO_HAL_PROBE_TIMEOUT_MS = 1_500L
 
         private const val RTP_PORT_MIN = 30000
-        private const val RTP_PORT_MAX = 40000
+        private const val RTP_PORT_MAX = 31000
 
         /** Placeholder shown in settings until a real MSISDN is entered. */
         private const val DEFAULT_OWN_NUMBER = "+49123123123123"
