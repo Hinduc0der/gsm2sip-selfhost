@@ -641,53 +641,75 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
+                            android:orientation="vertical"
                             android:layout_marginTop="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="@string/cfg_battery_start"
-                                android:textColor="@color/text_label" />
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
-                            <EditText
-                                android:id="@+id/etCfgBatteryStart"
-                                android:layout_width="64dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:gravity="center"
-                                android:inputType="number"
-                                android:maxLength="3"
-                                android:textColor="@color/text_primary"
-                                android:background="@drawable/input_bg"
-                                android:padding="8dp" />
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_weight="1"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cfg_battery_start"
+                                    android:textColor="@color/text_label" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/cfg_battery_stop"
-                                android:textColor="@color/text_label"
-                                android:layout_marginStart="12dp" />
+                                <EditText
+                                    android:id="@+id/etCfgBatteryStart"
+                                    android:layout_width="64dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:gravity="center"
+                                    android:inputType="number"
+                                    android:maxLength="3"
+                                    android:textColor="@color/text_primary"
+                                    android:background="@drawable/input_bg"
+                                    android:padding="8dp" />
 
-                            <EditText
-                                android:id="@+id/etCfgBatteryStop"
-                                android:layout_width="64dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:gravity="center"
-                                android:inputType="number"
-                                android:maxLength="3"
-                                android:textColor="@color/text_primary"
-                                android:background="@drawable/input_bg"
-                                android:padding="8dp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cfg_percent"
+                                    android:textColor="@color/text_label"
+                                    android:layout_marginStart="4dp" />
+                            </LinearLayout>
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="@string/cfg_percent"
-                                android:textColor="@color/text_label"
-                                android:layout_marginStart="4dp" />
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="8dp">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_weight="1"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cfg_battery_stop"
+                                    android:textColor="@color/text_label" />
+
+                                <EditText
+                                    android:id="@+id/etCfgBatteryStop"
+                                    android:layout_width="64dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:gravity="center"
+                                    android:inputType="number"
+                                    android:maxLength="3"
+                                    android:textColor="@color/text_primary"
+                                    android:background="@drawable/input_bg"
+                                    android:padding="8dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/cfg_percent"
+                                    android:textColor="@color/text_label"
+                                    android:layout_marginStart="4dp" />
+                            </LinearLayout>
                         </LinearLayout>
 
                         <TextView

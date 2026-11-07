@@ -74,7 +74,7 @@
     <string name="cfg_battery_protection">Защита заряда батареи</string>
     <string name="cfg_battery_keep">Держать заряд в этих пределах</string>
     <string name="cfg_battery_start">Начинать заряд ниже</string>
-    <string name="cfg_battery_stop" formatted="false">"%   Остановить на"</string>
+    <string name="cfg_battery_stop">Остановить на</string>
     <string name="cfg_percent" formatted="false">%</string>
     <string name="cfg_battery_status_disabled">Отключено</string>
     <string name="cfg_battery_hint" formatted="false">Требует модуль Magisk gsm2sip. Диапазон по умолчанию 35%–65% снижает износ батареи, пока телефон подключён по USB.</string>

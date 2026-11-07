@@ -74,7 +74,7 @@
     <string name="cfg_battery_protection">Battery charge protection</string>
     <string name="cfg_battery_keep">Keep the battery between these limits</string>
     <string name="cfg_battery_start">Start charging below</string>
-    <string name="cfg_battery_stop" formatted="false">"%     Stop at"</string>
+    <string name="cfg_battery_stop">Stop at</string>
     <string name="cfg_percent" formatted="false">%</string>
     <string name="cfg_battery_status_disabled">Disabled</string>
     <string name="cfg_battery_hint" formatted="false">Requires the gsm2sip Magisk module. The default 35%–65% range reduces battery wear while the phone stays connected to USB.</string>
