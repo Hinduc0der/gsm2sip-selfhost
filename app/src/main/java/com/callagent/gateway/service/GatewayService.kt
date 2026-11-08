@@ -48,6 +48,7 @@ class GatewayService : Service() {
 
     private var sipClient: SipClient? = null
     private var batteryChargeGuard: BatteryChargeGuard? = null
+    private var batteryAlertMonitor: BatteryAlertMonitor? = null
     private var orchestrator: CallOrchestrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
@@ -276,6 +277,8 @@ class GatewayService : Service() {
         registerNetworkCallback()
         RootShell.init()
         batteryChargeGuard = BatteryChargeGuard(this).also { it.start() }
+        batteryAlertMonitor = BatteryAlertMonitor(this) { msg -> sendBatteryAlert(msg) }
+            .also { it.start() }
         thread(name = "notif-setup") {
             applyNotificationVisibility()
             silenceDefaultSmsApp()
@@ -589,6 +592,45 @@ class GatewayService : Service() {
             body = sms.text,
             extraHeaders = headers
         )
+    }
+
+    /**
+     * Relay a battery/power alert to the registered softphone as a SIP MESSAGE.
+     *
+     * Fire-and-forget with a few short retries: unlike an inbound SMS there is
+     * no on-disk queue behind this, so a brief retry rides out a momentary gap
+     * while the softphone re-registers, but a real network loss just drops it
+     * (and says so in the log).  The From user is a plain label so the alert is
+     * recognisable in the softphone's chat rather than looking like a caller.
+     */
+    private fun sendBatteryAlert(text: String) {
+        thread(name = "battery-alert") {
+            val own = ownNumberForSub(-1).ifEmpty { cfgUser }
+            val targetUri = "sip:$own@$cfgServer"
+            repeat(BATTERY_ALERT_TRIES) { attempt ->
+                val sip = sipClient
+                if (sip != null && sip.registered) {
+                    val code = sip.sendSipMessage(
+                        targetUri = targetUri,
+                        fromUser = "gsm2sip",
+                        body = text,
+                        extraHeaders = listOf("X-Battery-Alert: 1")
+                    )
+                    if (code == 200 || code == 202) {
+                        broadcastLog("Battery alert sent ($code): $text")
+                        return@thread
+                    }
+                }
+                if (attempt < BATTERY_ALERT_TRIES - 1) {
+                    try {
+                        Thread.sleep(BATTERY_ALERT_RETRY_MS)
+                    } catch (_: InterruptedException) {
+                        return@thread
+                    }
+                }
+            }
+            broadcastLog("Battery alert not delivered (no registration/network): $text")
+        }
     }
 
     // ── SIP → SMS ───────────────────────────────────────
@@ -1421,6 +1463,8 @@ class GatewayService : Service() {
     override fun onDestroy() {
         batteryChargeGuard?.stop()
         batteryChargeGuard = null
+        batteryAlertMonitor?.stop()
+        batteryAlertMonitor = null
         unregisterNetworkCallback()
         stopGateway()
         super.onDestroy()
@@ -1836,6 +1880,8 @@ class GatewayService : Service() {
 
         /** How long to wait before retrying a message the server did not take. */
         private const val SMS_RETRY_MS = 30_000L
+        private const val BATTERY_ALERT_TRIES = 3
+        private const val BATTERY_ALERT_RETRY_MS = 5_000L
 
         /** X-SMS-Received: ISO 8601 UTC, so the server does not have to guess
          *  at the gateway's local time zone. */

@@ -78,6 +78,14 @@
     <string name="cfg_percent" formatted="false">%</string>
     <string name="cfg_battery_status_disabled">Отключено</string>
     <string name="cfg_battery_hint" formatted="false">Требует модуль Magisk gsm2sip. Диапазон по умолчанию 35%–65% снижает износ батареи, пока телефон подключён по USB.</string>
+    <string name="cfg_battery_alert_title">Оповещение о питании/разряде</string>
+    <string name="cfg_battery_alert_enable">Слать сообщение в софтфон при потере питания</string>
+    <string name="cfg_battery_alert_threshold">Предупредить при заряде ниже</string>
+    <string name="cfg_battery_alert_hint">Шлёт SIP-сообщение на зарегистрированный софтфон, когда отключили внешнее питание и когда заряд упал ниже этого уровня. Для доставки у телефона должна остаться сеть — полную пропажу света, когда гаснет и роутер, оповестить нельзя.</string>
+    <string name="battery_alert_power_lost">⚠ gsm2sip: пропало внешнее питание, работаю от батареи (%1$d%%)</string>
+    <string name="battery_alert_low">⚠ gsm2sip: заряд %1$d%% — ниже порога %2$d%%</string>
+    <string name="battery_alert_critical">⚠ gsm2sip: критический заряд %1$d%%, телефон скоро выключится</string>
+    <string name="battery_alert_restored">✓ gsm2sip: внешнее питание восстановлено (%1$d%%)</string>
     <string name="cfg_autoconnect">Автоподключение при запуске</string>
     <string name="cfg_use_stun">Использовать STUN</string>
     <string name="cfg_stun_hint">Определяет публичный IP, чтобы SIP и RTP работали через NAT. Отключите для SIP-сервера в локальной сети.</string>

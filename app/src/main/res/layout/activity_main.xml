@@ -729,6 +729,61 @@
                             android:textColor="@color/text_hint"
                             android:paddingTop="4dp" />
 
+                        <TextView style="@style/CfgLabel"
+                            android:text="@string/cfg_battery_alert_title"
+                            android:layout_marginTop="16dp" />
+
+                        <CheckBox
+                            android:id="@+id/cbCfgBatteryAlert"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/cfg_battery_alert_enable"
+                            android:buttonTint="@color/accent"
+                            android:textColor="@color/text_label"
+                            android:layout_marginTop="4dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="4dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="@string/cfg_battery_alert_threshold"
+                                android:textColor="@color/text_label" />
+
+                            <EditText
+                                android:id="@+id/etCfgBatteryAlertThreshold"
+                                android:layout_width="64dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:gravity="center"
+                                android:inputType="number"
+                                android:maxLength="3"
+                                android:textColor="@color/text_primary"
+                                android:background="@drawable/input_bg"
+                                android:padding="8dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/cfg_percent"
+                                android:textColor="@color/text_label"
+                                android:layout_marginStart="4dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/cfg_battery_alert_hint"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_hint"
+                            android:paddingTop="6dp" />
+
                         <CheckBox
                             android:id="@+id/cbCfgAutoconnect"
                             android:layout_width="match_parent"

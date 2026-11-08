@@ -78,6 +78,14 @@
     <string name="cfg_percent" formatted="false">%</string>
     <string name="cfg_battery_status_disabled">Disabled</string>
     <string name="cfg_battery_hint" formatted="false">Requires the gsm2sip Magisk module. The default 35%–65% range reduces battery wear while the phone stays connected to USB.</string>
+    <string name="cfg_battery_alert_title">Power/battery alert</string>
+    <string name="cfg_battery_alert_enable">Message the softphone on power loss</string>
+    <string name="cfg_battery_alert_threshold">Warn when charge below</string>
+    <string name="cfg_battery_alert_hint">Sends a SIP message to the registered softphone when external power is unplugged and when the charge drops below this level. Needs the phone to still have a network path to deliver — a full site outage that also kills the router cannot be reported.</string>
+    <string name="battery_alert_power_lost">⚠ gsm2sip: external power lost, running on battery (%1$d%%)</string>
+    <string name="battery_alert_low">⚠ gsm2sip: battery %1$d%% — below the %2$d%% alert level</string>
+    <string name="battery_alert_critical">⚠ gsm2sip: critical battery %1$d%%, the phone will shut down soon</string>
+    <string name="battery_alert_restored">✓ gsm2sip: external power restored (%1$d%%)</string>
     <string name="cfg_autoconnect">Autoconnect on startup</string>
     <string name="cfg_use_stun">Use STUN</string>
     <string name="cfg_stun_hint">Finds the public IP so SIP and RTP survive NAT. Turn off for a SIP server on the local network.</string>

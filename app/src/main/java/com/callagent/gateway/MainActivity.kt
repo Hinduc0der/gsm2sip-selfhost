@@ -626,6 +626,11 @@ class MainActivity : AppCompatActivity() {
         findViewById<EditText>(R.id.etCfgBatteryStop).setText(
             prefs.getInt("battery_stop_threshold", 65).toString()
         )
+        findViewById<CheckBox>(R.id.cbCfgBatteryAlert).isChecked =
+            prefs.getBoolean("battery_alert", false)
+        findViewById<EditText>(R.id.etCfgBatteryAlertThreshold).setText(
+            prefs.getInt("battery_alert_threshold", 20).toString()
+        )
         refreshBatteryProtectionStatus()
         val cbTls = findViewById<CheckBox>(R.id.cbCfgTls)
         val cbSrtp = findViewById<CheckBox>(R.id.cbCfgSrtp)
@@ -737,6 +742,9 @@ class MainActivity : AppCompatActivity() {
             .text.toString().trim().toIntOrNull() ?: 35
         val batteryStop = findViewById<EditText>(R.id.etCfgBatteryStop)
             .text.toString().trim().toIntOrNull() ?: 65
+        val batteryAlert = findViewById<CheckBox>(R.id.cbCfgBatteryAlert).isChecked
+        val batteryAlertThreshold = (findViewById<EditText>(R.id.etCfgBatteryAlertThreshold)
+            .text.toString().trim().toIntOrNull() ?: 20).coerceIn(5, 95)
         val tls = findViewById<CheckBox>(R.id.cbCfgTls).isChecked
         // Stored as asked for, but only ever acted on with TLS — so turning
         // TLS off and on again does not silently lose the audio setting.
@@ -780,6 +788,8 @@ class MainActivity : AppCompatActivity() {
             .putBoolean("battery_protection", batteryProtection)
             .putInt("battery_start_threshold", batteryStart)
             .putInt("battery_stop_threshold", batteryStop)
+            .putBoolean("battery_alert", batteryAlert)
+            .putInt("battery_alert_threshold", batteryAlertThreshold)
             .putBoolean("sip_tls", tls)
             .putBoolean("srtp_enabled", srtp)
             .putString("codec", codec)
@@ -792,6 +802,7 @@ class MainActivity : AppCompatActivity() {
                 "srtp=${if (srtp && tls) "on" else "off"}, " +
                 "ascii=${if (translit) "on" else "off"}, " +
                     "battery=${if (batteryProtection) "$batteryStart-$batteryStop%" else "off"}, " +
+                    "alert=${if (batteryAlert) "<$batteryAlertThreshold%" else "off"}, " +
                     "agent volume ${if (agentVolStep > 0) "+$agentVolStep" else "$agentVolStep"})"
         )
         Toast.makeText(this, getString(R.string.toast_saved_reconnecting), Toast.LENGTH_SHORT).show()
