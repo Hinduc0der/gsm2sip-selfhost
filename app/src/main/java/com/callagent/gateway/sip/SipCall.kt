@@ -402,11 +402,17 @@ class SipCall(
             srtp = localSrtpKeys, srtpTag = srtpTag
         )
 
-        val address = invite.contactAddress ?: sipClient.serverAddress
+        // Send the 200 OK to the socket the INVITE actually came from
+        // (remoteContactAddress, set to the datagram source in
+        // SipClient.handleIncomingInvite), not to the Contact header.  Behind
+        // NAT/CGNAT/VPN the Contact is often an unroutable private address, and
+        // a 200 OK sent there never reaches the caller: it never ACKs and never
+        // starts sending RTP, so the call looks connected but is silent.
+        val address = remoteContactAddress ?: invite.contactAddress ?: sipClient.serverAddress
         sipClient.sendResponse(ok, address)
 
         state = State.ANSWERED
-        Log.i(TAG, "Sent 200 OK for inbound call $callId (RTP port: $localRtpPort)")
+        Log.i(TAG, "Sent 200 OK for inbound call $callId (RTP port: $localRtpPort) to $address")
     }
 
     /** Turn down an inbound INVITE we cannot bridge. */
@@ -415,7 +421,9 @@ class SipCall(
         val invite = originalInvite ?: return
 
         val response = SipBuilder.reject(invite, code, reason, toTag)
-        sipClient.sendResponse(response, invite.contactAddress ?: sipClient.serverAddress)
+        // Same reachable-socket rule as accept(): reply to the INVITE's source,
+        // not its (possibly unroutable) Contact header.
+        sipClient.sendResponse(response, remoteContactAddress ?: invite.contactAddress ?: sipClient.serverAddress)
 
         state = State.TERMINATED
         Log.i(TAG, "Rejected inbound call $callId with $code $reason")

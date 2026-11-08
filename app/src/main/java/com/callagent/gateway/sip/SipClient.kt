@@ -629,7 +629,15 @@ class SipClient(
         call.callerNumber = msg.callerNumber
         call.callerDisplayName = msg.callerDisplayName
         call.remoteContactUri = msg.contactUri
-        call.remoteContactAddress = msg.contactAddress ?: address
+        // Reply to the UDP source the INVITE arrived from, not to its Contact
+        // header.  Behind NAT/CGNAT/VPN a softphone puts an unroutable private
+        // address in Contact (carrier CGNAT 100.64.x, tunnel 10.8.x), so a
+        // 200 OK / 180 / in-dialog request sent to Contact is lost and the
+        // caller never sends RTP — a connected-looking but silent call.  The
+        // datagram source is the reachable socket (symmetric UDP / rport); this
+        // mirrors the 200-OK handling in SipCall.handleMessage, which already
+        // prefers srcAddress over Contact for the same reason.
+        call.remoteContactAddress = address
         call.remoteCseq = msg.cseq?.split(" ")?.firstOrNull()?.toIntOrNull() ?: 1
         call.fromHeader = msg.from
         call.toHeader = msg.to
