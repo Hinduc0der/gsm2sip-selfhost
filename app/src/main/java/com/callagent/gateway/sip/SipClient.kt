@@ -664,7 +664,17 @@ class SipClient(
         call.gsmForwardNumber = msg.gsmForwardNumber
 
         activeCalls[callId] = call
-        listener?.onIncomingCall(call)
+        // The listener runs the GSM-dial path on this SIP receive thread.  A
+        // throw there (e.g. a platform NoSuchMethodError) must not kill the
+        // receiver and take the whole gateway down — reject this one call and
+        // keep listening.
+        try {
+            listener?.onIncomingCall(call)
+        } catch (e: Throwable) {
+            Log.e(TAG, "onIncomingCall failed for $callId: ${e.message}", e)
+            try { call.reject(500, "Server Internal Error") } catch (_: Throwable) {}
+            activeCalls.remove(callId)
+        }
     }
 
     // ── Outbound INVITE ─────────────────────────────────

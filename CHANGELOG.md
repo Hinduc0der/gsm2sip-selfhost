@@ -3,6 +3,24 @@
 Записи — только про наши изменения поверх [pulpoff/gsm2sip](https://github.com/pulpoff/gsm2sip).
 Полная история — в `git log`.
 
+## 1.3.15 (versionCode 442) - 08.11.2026
+
+Фикс краша исходящего SIP→GSM звонка на Android 9 (API 28).
+
+- `GsmCallManager.findPhoneAccountForCid` вызывал `TelephonyManager.getSubscriptionId(PhoneAccountHandle)`
+  - метод появился только в API 30 (Android 11). На S4 mini (LineageOS, Android 9 / API 28) его нет →
+  `NoSuchMethodError` при КАЖДОМ исходящем звонке: процесс `com.callagent.gateway` падал в потоке
+  SIP-Recv и перезапускался, звонок до GSM не доходил (INVITE прилетал, а дальше краш). Это объясняет
+  «тишину» и то, что у вызываемого телефон не звонил.
+- Фикс: (1) на одной SIM (единственный call-capable аккаунт) сразу берём её, без резолва subId -
+  CID всё равно нечего различать; (2) вызов `getSubscriptionId` обёрнут в `Build.VERSION.SDK_INT >= 30`,
+  на старых API subId берётся из id аккаунта; ловим `Throwable`, а не `Exception` (NoSuchMethodError - это
+  Error). (3) Защитный try/catch вокруг `onIncomingCall` в `SipClient.handleIncomingInvite`: сбой набора
+  теперь отклоняет один вызов (500), а не роняет весь SIP-приёмник.
+- Регрессия: на сборке 22.10 (v1.3.9/1.3.11) этого вызова не было, поэтому исходящий звонок тогда
+  работал на LAN. Проверка порта/маршрута/MTU к этому багу отношения не имела (краш шёл уже ПОСЛЕ
+  доставки INVITE, и прямым путём с реального IP тоже).
+
 ## 1.3.14 (versionCode 441) - 08.11.2026
 
 Оповещение о потере питания / разряде батареи в софтфон.

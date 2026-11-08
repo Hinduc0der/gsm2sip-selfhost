@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -395,6 +396,16 @@ object GsmCallManager {
             return null
         }
 
+        // A single call-capable account means a single SIM: it is the only
+        // thing we can dial on, so the CID cannot disambiguate anything and no
+        // per-account subscription lookup is needed.  This also sidesteps
+        // TelephonyManager.getSubscriptionId(PhoneAccountHandle) below, which
+        // exists only on API 30+ and throws NoSuchMethodError on older Android
+        // (the S4 mini runs API 28 / Android 9) — the crash that took down the
+        // SIP receiver on every outbound call.
+        if (accounts.isEmpty()) return null
+        if (accounts.size == 1) return accounts.single()
+
         val tm = context.getSystemService(TelephonyManager::class.java)
         val sm = context.getSystemService(SubscriptionManager::class.java)
         // The legacy own_number value was assigned to the lowest active slot
@@ -410,11 +421,20 @@ object GsmCallManager {
         }
         val matches = mutableListOf<PhoneAccountHandle>()
         for (account in accounts) {
-            val subId = try {
-                tm.getSubscriptionId(account)
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not resolve subscription for phone account: ${e.message}")
-                SubscriptionManager.INVALID_SUBSCRIPTION_ID
+            // getSubscriptionId(PhoneAccountHandle) is API 30+.  On older
+            // Android fall back to the account id, which is the subscription id
+            // on the AOSP telephony stack.  catch Throwable, not Exception: a
+            // missing method is a NoSuchMethodError (an Error), which an
+            // Exception catch would let through to crash the process.
+            val subId = if (Build.VERSION.SDK_INT >= 30) {
+                try {
+                    tm.getSubscriptionId(account)
+                } catch (e: Throwable) {
+                    Log.w(TAG, "Could not resolve subscription for phone account: ${e.message}")
+                    SubscriptionManager.INVALID_SUBSCRIPTION_ID
+                }
+            } else {
+                account.id.toIntOrNull() ?: SubscriptionManager.INVALID_SUBSCRIPTION_ID
             }
             if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) continue
 
