@@ -19,3 +19,6 @@ app/build/
 
 # Внутренние dev-доки (аудиты, планы совместимости) - не публикуются на GitHub
 docs/dev/
+
+# release staging
+dist/
