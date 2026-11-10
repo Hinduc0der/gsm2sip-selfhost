@@ -530,12 +530,39 @@ class SipClient(
      */
     private fun registrarAuthPassed(msg: SipMessage, address: Pair<String, Int>): Boolean {
         if (registrarPassword.isEmpty()) return true
+        return digestAuthPassed(msg, address, "REGISTER")
+    }
+
+    /**
+     * Challenge/verify an inbound INVITE before it is allowed to place a GSM
+     * call.  Without this any host that can reach the SIP port dials out over
+     * GSM with no credentials — an open toll-fraud relay (the registrar password
+     * only ever gated REGISTER, i.e. who may RECEIVE calls, not who may place
+     * them).  Fails closed: with no registrar password set, outbound calls are
+     * refused (403) rather than dialed by anyone.
+     */
+    private fun inviteAuthPassed(msg: SipMessage, address: Pair<String, Int>): Boolean {
+        if (registrarPassword.isEmpty()) {
+            sendTo(SipBuilder.statusResponse(msg, 403, "Forbidden"), address)
+            uiLog("Registrar: INVITE from ${address.first} refused — set a registrar password to allow outbound calls")
+            return false
+        }
+        return digestAuthPassed(msg, address, "INVITE")
+    }
+
+    /**
+     * Shared SIP digest challenge/verify for inbound REGISTER and INVITE in
+     * registrar mode.  The caller decides the empty-password policy first.
+     * Returns true to let the request through, false when handled here
+     * (401 challenge sent, or silently dropped as banned).
+     */
+    private fun digestAuthPassed(msg: SipMessage, address: Pair<String, Int>, method: String): Boolean {
         val ip = address.first
         val now = System.currentTimeMillis()
         synchronized(authLock) {
             authBanUntil[ip]?.let { until ->
                 if (now < until) {
-                    Log.w(TAG, "REGISTER from banned $ip dropped (${(until - now) / 1000}s left)")
+                    Log.w(TAG, "$method from banned $ip dropped (${(until - now) / 1000}s left)")
                     return false
                 }
                 authBanUntil.remove(ip); authFailTimes.remove(ip)
@@ -543,7 +570,7 @@ class SipClient(
         }
         val authHeader = msg.header("authorization")
         val params = SipAuth.parseAuthorization(msg)
-        val ok = params != null && SipAuth.verify(params, "REGISTER", registrarPassword) { nonce ->
+        val ok = params != null && SipAuth.verify(params, method, registrarPassword) { nonce ->
             val issuedAt = issuedNonces[nonce]
             issuedAt != null && now - issuedAt <= nonceTtlMs
         }
@@ -551,8 +578,8 @@ class SipClient(
             synchronized(authLock) { authFailTimes.remove(ip); authBanUntil.remove(ip) }
             return true
         }
-        // A credential-bearing REGISTER that failed counts toward the ban; a first, challenge-less
-        // REGISTER does not (that is the normal start of the digest handshake).
+        // A credential-bearing request that failed counts toward the ban; a first,
+        // challenge-less one does not (that is the normal start of the handshake).
         if (authHeader != null && registrarAuthFailed(ip, now)) {
             uiLog("Registrar: brute-force from $ip — banned for ${authBanMs / 1000}s")
             return false
@@ -565,7 +592,7 @@ class SipClient(
             ),
             address
         )
-        uiLog("Registrar: REGISTER challenged (${if (authHeader == null) "no credentials" else "bad credentials"}) from $ip")
+        uiLog("Registrar: $method challenged (${if (authHeader == null) "no credentials" else "bad credentials"}) from $ip")
         return false
     }
 
@@ -620,6 +647,14 @@ class SipClient(
     private fun handleIncomingInvite(msg: SipMessage, address: Pair<String, Int>) {
         val callId = msg.callId ?: return
         Log.i(TAG, "Incoming INVITE call-id=$callId from=${msg.callerNumber}")
+
+        // An inbound INVITE makes the handset place a GSM call, which costs money.
+        // In registrar mode (the handset is itself the SIP server that softphones
+        // connect to) it MUST be authenticated with the same digest secret as
+        // REGISTER — otherwise any host that can reach this UDP port dials out over
+        // GSM for free with a forged From/Via (open toll-fraud relay). Classic mode
+        // trusts its one configured upstream server and is left unchanged.
+        if (builtinRegistrar && !inviteAuthPassed(msg, address)) return
 
         // Send 100 Trying
         sendTo(SipBuilder.trying100(msg), address)
