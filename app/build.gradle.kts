@@ -13,8 +13,8 @@ android {
         applicationId = "com.callagent.gateway"
         minSdk = 26
         targetSdk = 34
-        versionCode = 444
-        versionName = "1.3.17"
+        versionCode = 445
+        versionName = "1.3.18"
 
         // Интерфейс локализован только на английский и русский.  Ограничиваем
         // набор локалей ресурсов — лишние конфигурации в APK не попадают, а

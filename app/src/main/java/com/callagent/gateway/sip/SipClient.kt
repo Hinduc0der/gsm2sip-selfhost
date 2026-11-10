@@ -100,10 +100,17 @@ class SipClient(
     private val authLock = Any()
     private val authFailTimes = HashMap<String, ArrayDeque<Long>>() // IP -> recent fail times (under authLock)
     private val authBanUntil = HashMap<String, Long>()              // IP -> banned until ms (under authLock)
+    private val authBanCount = HashMap<String, Int>()              // IP -> consecutive ban level (under authLock)
+    private val authBanLastMs = HashMap<String, Long>()            // IP -> time of last ban, for escalation decay (under authLock)
     private val nonceTtlMs = 300_000L
     private val authMaxFails = 5
     private val authFailWindowMs = 60_000L
-    private val authBanMs = 600_000L
+    // Repeat offenders escalate: 1st ban 10 min, 2nd 1 h, 3rd+ 24 h.  Observed attack pattern is a
+    // single IP bursting until banned, then rotating to the next IP of the same hoster between
+    // sessions — a longer ban on a returning IP makes that rotation expensive without a /24 ban
+    // (rejected: a legitimate softphone could share a hoster with an attacker).
+    private val authBanEscalation = longArrayOf(600_000L, 3_600_000L, 86_400_000L)
+    private val authBanResetMs = 86_400_000L                       // no new ban for this long -> escalation resets
     /** The live softphone registration, if any (registrar mode). */
     fun currentRegistration(): Registration? {
         val t = System.currentTimeMillis()
@@ -580,9 +587,13 @@ class SipClient(
         }
         // A credential-bearing request that failed counts toward the ban; a first,
         // challenge-less one does not (that is the normal start of the handshake).
-        if (authHeader != null && registrarAuthFailed(ip, now)) {
-            uiLog("Registrar: brute-force from $ip — banned for ${authBanMs / 1000}s")
-            return false
+        if (authHeader != null) {
+            val banMs = registrarAuthFailed(ip, now)
+            if (banMs > 0L) {
+                val who = params?.get("username")?.let { " (user=$it)" } ?: ""
+                uiLog("Registrar: brute-force from $ip$who — banned for ${banMs / 1000}s")
+                return false
+            }
         }
         val nonce = issueNonce(now)
         sendTo(
@@ -592,20 +603,33 @@ class SipClient(
             ),
             address
         )
-        uiLog("Registrar: $method challenged (${if (authHeader == null) "no credentials" else "bad credentials"}) from $ip")
+        val who = params?.get("username")?.let { " user=$it" } ?: ""
+        uiLog("Registrar: $method challenged (${if (authHeader == null) "no credentials" else "bad credentials"}) from $ip$who")
         return false
     }
 
-    /** Record a failed auth from [ip]; returns true once the window is over the limit (now banned). */
-    private fun registrarAuthFailed(ip: String, now: Long): Boolean = synchronized(authLock) {
+    /** Record a failed auth from [ip]; returns the ban duration in ms if this pushed it over the
+     *  limit (now banned), else 0.  Repeat offenders escalate per [authBanEscalation]; the level
+     *  decays after [authBanResetMs] of good behaviour. */
+    private fun registrarAuthFailed(ip: String, now: Long): Long = synchronized(authLock) {
+        // Forget escalation history for IPs that have behaved past the reset window, so the maps
+        // stay bounded and a reused address is not punished for ancient offences.
+        val stale = authBanLastMs.filterValues { now - it > authBanResetMs }.keys.toList()
+        for (k in stale) { authBanLastMs.remove(k); authBanCount.remove(k) }
+
         val times = authFailTimes.getOrPut(ip) { ArrayDeque() }
         times.addLast(now)
         while (times.isNotEmpty() && now - times.first() > authFailWindowMs) times.removeFirst()
         if (times.size >= authMaxFails) {
-            authBanUntil[ip] = now + authBanMs
+            val prior = if (authBanLastMs[ip]?.let { now - it <= authBanResetMs } == true) authBanCount[ip] ?: 0 else 0
+            val level = prior + 1
+            val dur = authBanEscalation[minOf(level - 1, authBanEscalation.size - 1)]
+            authBanCount[ip] = level
+            authBanLastMs[ip] = now
+            authBanUntil[ip] = now + dur
             authFailTimes.remove(ip)
-            true
-        } else false
+            dur
+        } else 0L
     }
 
     /** Issue a fresh nonce, pruning expired ones so the map cannot grow without bound. */
